@@ -15,11 +15,13 @@ import {
   Columns3,
   Hexagon,
   Flag,
-  Wrench
+  Wrench,
+  Home
 } from 'lucide-react';
 import { GameSettings, FerryDock, DailyForecast } from '../types/game';
 
 interface HeaderBarProps {
+  onOpenMainMenu?: () => void;
   funds: number;
   pendingDailyRevenue?: number;
   dailyDuesAmount?: number;
@@ -55,6 +57,7 @@ interface HeaderBarProps {
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
+  onOpenMainMenu,
   funds,
   pendingDailyRevenue = 0,
   dailyDuesAmount = 0,
@@ -97,13 +100,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
     <header className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-3.5 bg-[#2B2F38] border-b-[3px] border-[#1E222A] text-[#F4F6F9] shrink-0 select-none gap-3 sm:gap-4 shadow-[0_4px_0_#1E222A]">
       {/* Zone 1: Brand Wordmark with Playful Safety Yellow Construction Badge */}
       <div className="flex items-center gap-3">
-        <a
-          href="#game"
-          onClick={(e) => {
-            e.preventDefault();
-            onTabChange('simulation');
-          }}
-          className="px-3.5 py-1.5 bg-[#FFD200] hover:bg-[#FFE043] border-[3px] border-[#1E222A] rounded-2xl shadow-[0_4px_0_#1E222A] active:translate-y-1 active:shadow-[0_1px_0_#1E222A] transition-all flex items-center gap-2 cursor-pointer group"
+        <button
+          onClick={onOpenMainMenu || (() => onTabChange('simulation'))}
+          className="px-3.5 py-1.5 bg-[#FFD200] hover:bg-[#FFE043] border-[3px] border-[#1E222A] rounded-2xl shadow-[0_4px_0_#1E222A] active:translate-y-1 active:shadow-[0_1px_0_#1E222A] transition-all flex items-center gap-2 cursor-pointer group text-left"
+          title="Open Main Menu (Pause Shift)"
         >
           <div className="w-6 h-6 rounded-lg bg-[#1E222A] flex items-center justify-center text-[#FFD200] group-hover:rotate-12 transition-transform">
             <Ship className="w-4 h-4" />
@@ -119,7 +119,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
               Port Simulator
             </span>
           </div>
-        </a>
+        </button>
 
         {/* Development Company Pill (HEXperience in Huntington Bank colors) */}
         <div
@@ -135,6 +135,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
       {/* Zone 2: Navigation controls as Chunky Segmented 3D Port Tabs */}
       <nav className="flex items-center gap-1.5 bg-[#1E222A] p-1.5 rounded-2xl border-[3px] border-[#1E222A] shadow-inner overflow-x-auto">
+        {onOpenMainMenu && (
+          <button
+            onClick={onOpenMainMenu}
+            className="px-3 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] bg-[#1E222A] hover:bg-[#2B2F38] text-[#FFD200] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
+            style={{ fontFamily: 'var(--font-heading)' }}
+            title="Open Main Menu & Settings (Pause Shift)"
+          >
+            <Home className="w-4 h-4 text-[#FFD200]" />
+            <span>Main Menu</span>
+          </button>
+        )}
         <button
           onClick={() => onTabChange('simulation')}
           className={`px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${

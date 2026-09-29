@@ -291,8 +291,12 @@ export function useGameEngine() {
   const [backlogItems, setBacklogItems] = useState<BacklogItem[]>(() =>
     preSelectOptimalBatch(generateDailyBacklog(1), INITIAL_FERRY.capacity)
   );
-  const [isSprintPlanningOpen, setIsSprintPlanningOpen] = useState<boolean>(true);
+  const [isSprintPlanningOpen, setIsSprintPlanningOpen] = useState<boolean>(false);
   const lastParkingReleaseTimeRef = useRef<number>(0);
+
+  // Main Menu State: starts on the main menu
+  const [isMainMenuOpen, setIsMainMenuOpen] = useState<boolean>(true);
+  const [hasStartedGame, setHasStartedGame] = useState<boolean>(false);
 
   // Predetermined Tech Scenarios State
   const [activeScenario, setActiveScenario] = useState<ActiveScenarioState | null>(null);
@@ -334,6 +338,8 @@ export function useGameEngine() {
     ferry,
     vehicles,
     settings,
+    isMainMenuOpen: true,
+    hasStartedGame: false,
     sprintSummary: null as SprintSummary | null,
     activeScenario: null as ActiveScenarioState | null,
     activeScenarioDef: null as ScenarioDefinition | null,
@@ -354,7 +360,9 @@ export function useGameEngine() {
     stateRef.current.sprintSummary = sprintSummary;
     stateRef.current.activeScenario = activeScenario;
     stateRef.current.activeScenarioDef = activeScenarioDef;
-  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef]);
+    stateRef.current.isMainMenuOpen = isMainMenuOpen;
+    stateRef.current.hasStartedGame = hasStartedGame;
+  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, hasStartedGame]);
 
   // Helper to pick story point with weighted distribution
   const pickRandomStoryPoint = useCallback((): StoryPoint => {
@@ -1130,8 +1138,8 @@ export function useGameEngine() {
       const deltaSec = Math.min((now - lastTick) / 1000, 0.1) * stateRef.current.settings.gameSpeed;
       lastTick = now;
 
-      // When sprint retro is present on the screen, pause all simulation actions and motion
-      if (stateRef.current.settings.gameSpeed > 0 && !stateRef.current.sprintSummary) {
+      // When sprint retro or main menu is present on the screen, pause all simulation actions and motion
+      if (stateRef.current.settings.gameSpeed > 0 && !stateRef.current.sprintSummary && !stateRef.current.isMainMenuOpen) {
         updateSimulation(deltaSec);
       }
 
@@ -2190,6 +2198,8 @@ export function useGameEngine() {
 
     setIsScenarioSelectOpen(false);
     setIsScenarioOutcomeOpen(false);
+    setIsMainMenuOpen(false);
+    setHasStartedGame(true);
   }, [createVehicle, assignVehicleToLane]);
 
   // Restart the currently active scenario
@@ -2227,6 +2237,88 @@ export function useGameEngine() {
 
   const closeScenarioOutcome = useCallback(() => {
     setIsScenarioOutcomeOpen(false);
+  }, []);
+
+  // Main Menu Actions
+  const openMainMenu = useCallback(() => {
+    sound.playClick();
+    setIsMainMenuOpen(true);
+  }, []);
+
+  const closeMainMenu = useCallback(() => {
+    sound.playClick();
+    setHasStartedGame(true);
+    setIsMainMenuOpen(false);
+  }, []);
+
+  const resumeGame = useCallback(() => {
+    sound.playClick();
+    setHasStartedGame(true);
+    setIsMainMenuOpen(false);
+  }, []);
+
+  const startNewFreePlayGame = useCallback(() => {
+    sound.playFerryHorn();
+    setActiveScenario(null);
+    setActiveScenarioDef(null);
+    stateRef.current.activeScenario = null;
+    stateRef.current.activeScenarioDef = null;
+    setIsScenarioOutcomeOpen(false);
+    setIsScenarioSelectOpen(false);
+
+    setFunds(200);
+    stateRef.current.funds = 200;
+    setPendingDailyRevenue(0);
+    stateRef.current.pendingDailyRevenue = 0;
+    setTotalDeliveredPoints(0);
+
+    const resetBooths = INITIAL_BOOTHS.map((b, idx) => ({
+      ...b,
+      unlocked: idx < 2,
+      level: 1,
+      xp: 0,
+      multiplier: 1.0,
+      efficiencyLevel: 1,
+      automationLevel: 1,
+      trainingLevel: 1,
+      wipLimit: 4,
+      specialization: 'all' as LaneSpecialization,
+      currentVehicleId: null,
+      processingProgress: 0,
+      isProcessing: false,
+      barrierRaised: false,
+      incident: null
+    }));
+    setBooths(resetBooths);
+    stateRef.current.booths = resetBooths;
+
+    const resetFerry: FerryDock = {
+      ...INITIAL_FERRY,
+      dayNumber: 1,
+      sprintNumber: 1,
+      dayPhase: 'morning',
+      dayTimeFormatted: '09:00 AM',
+      sprintTimer: 45,
+      currentPoints: 0,
+      vehiclesOnBoard: [],
+      state: 'boarding'
+    };
+    setFerry(resetFerry);
+    stateRef.current.ferry = resetFerry;
+
+    setVehicles([]);
+    stateRef.current.vehicles = [];
+    setSprintSummary(null);
+    stateRef.current.sprintSummary = null;
+    setLastSprintSummary(null);
+    setSelectedVehicle(null);
+    setSelectedBoothId(null);
+
+    const freshBacklog = preSelectOptimalBatch(generateDailyBacklog(1), INITIAL_FERRY.capacity);
+    setBacklogItems(freshBacklog);
+
+    setHasStartedGame(true);
+    setIsMainMenuOpen(false);
   }, []);
 
   const dailyDues = useMemo(() => calculateDailyDues(booths, ferry), [booths, ferry]);
@@ -2274,6 +2366,14 @@ export function useGameEngine() {
     openScenarioSelect,
     closeScenarioSelect,
     closeScenarioOutcome,
+    // Main Menu
+    isMainMenuOpen,
+    setIsMainMenuOpen,
+    hasStartedGame,
+    openMainMenu,
+    closeMainMenu,
+    resumeGame,
+    startNewFreePlayGame,
     // Actions
     addFunds,
     setDailyDuration,

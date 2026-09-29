@@ -14,6 +14,7 @@ import { ScenarioSelectModal } from './components/ScenarioSelectModal';
 import { ScenarioOutcomeModal } from './components/ScenarioOutcomeModal';
 import { ScenarioObjectiveHUD } from './components/ScenarioObjectiveHUD';
 import { SprintPlanningModal } from './components/SprintPlanningModal';
+import { MainMenu } from './components/MainMenu';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<'simulation' | 'kanban' | 'academy' | 'metrics'>('simulation');
@@ -62,6 +63,14 @@ export default function App() {
     openScenarioSelect,
     closeScenarioSelect,
     closeScenarioOutcome,
+    // Main Menu
+    isMainMenuOpen,
+    setIsMainMenuOpen,
+    hasStartedGame,
+    openMainMenu,
+    closeMainMenu,
+    resumeGame,
+    startNewFreePlayGame,
     // Actions
     addFunds,
     setDailyDuration,
@@ -110,6 +119,7 @@ export default function App() {
     <div className="min-h-screen bg-[#2B2F38] text-[#F4F6F9] flex flex-col font-sans selection:bg-[#FFD200] selection:text-[#1E222A]">
       {/* Universal Top Bar with Daily Sprint Cadence & Countdown */}
       <HeaderBar
+        onOpenMainMenu={openMainMenu}
         funds={funds}
         pendingDailyRevenue={pendingDailyRevenue}
         dailyDuesAmount={dailyDues?.totalDailyDues ?? 0}
@@ -395,8 +405,42 @@ export default function App() {
           onRestartScenario={restartScenario}
           onChooseAnotherScenario={openScenarioSelect}
           onReturnToFreePlay={resetToFreePlay}
+          onReturnToMainMenu={openMainMenu}
         />
       )}
+
+      {/* Main Menu & Initial Start Screen */}
+      <MainMenu
+        isOpen={isMainMenuOpen}
+        hasActiveGame={hasStartedGame}
+        dayNumber={ferry.dayNumber}
+        dayTimeFormatted={ferry.dayTimeFormatted}
+        funds={funds}
+        totalPoints={totalDeliveredPoints}
+        ferryPoints={ferry.currentPoints}
+        ferryCapacity={ferry.capacity}
+        activeScenarioTitle={activeScenarioDef?.title}
+        soundEnabled={settings.soundEnabled}
+        continuousFlowMode={settings.continuousFlowMode}
+        gameSpeed={settings.gameSpeed}
+        onResumeGame={resumeGame}
+        onStartNewGame={startNewFreePlayGame}
+        onOpenScenarios={openScenarioSelect}
+        onSelectScenario={(scenario) => {
+          startScenario(scenario);
+        }}
+        onOpenAcademy={() => {
+          setActiveTab('academy');
+          closeMainMenu();
+        }}
+        onOpenSprintPlanning={() => {
+          openSprintPlanning();
+          closeMainMenu();
+        }}
+        onToggleSound={toggleSound}
+        onToggleContinuousFlow={toggleContinuousFlowMode}
+        onSetGameSpeed={setGameSpeed}
+      />
     </div>
   );
 }
