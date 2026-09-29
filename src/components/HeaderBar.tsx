@@ -51,6 +51,7 @@ interface HeaderBarProps {
   onOpenRetrospective?: () => void;
   hasLastRetrospective?: boolean;
   ferryReady: boolean;
+  isRetroOpen?: boolean;
 }
 
 export const HeaderBar: React.FC<HeaderBarProps> = ({
@@ -84,7 +85,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   onToggleContinuousFlow,
   onOpenRetrospective,
   hasLastRetrospective,
-  ferryReady
+  ferryReady,
+  isRetroOpen = false
 }) => {
   const secondsLeft = Math.ceil(sprintTimer);
   const formattedCountdown = `00:${String(secondsLeft).padStart(2, '0')}`;
@@ -277,24 +279,37 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* Daily Cycle Countdown in Header */}
         <div
           className={`hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl border-[2.5px] border-[#1E222A] font-mono text-xs font-bold shadow-[0_3px_0_#1E222A] ${
-            isUrgent
+            isRetroOpen
+              ? 'bg-[#E85D04] text-white animate-pulse'
+              : isUrgent
               ? 'bg-[#D92525] text-white animate-pulse'
               : 'bg-[#F4F6F9] text-[#1E222A]'
           }`}
-          title="Ferry leaves when FULL or when timer runs out at 05:00 PM"
+          title={isRetroOpen ? 'All simulation actions paused while Sprint Retrospective is active' : 'Ferry leaves when FULL or when timer runs out at 05:00 PM'}
         >
-          <span className="font-extrabold text-[#48A2D8]">Day {dayNumber}</span>
-          <span className="text-slate-400">·</span>
-          <span>{dayTimeFormatted}</span>
-          <span className="text-slate-400">·</span>
-          <Clock className={`w-4 h-4 ${isUrgent ? 'text-white animate-spin' : 'text-[#E85D04]'}`} />
-          <span className="tabular-nums font-black">
-            {ferryState === 'boarding'
-              ? isFull
-                ? 'FULL! CASTING OFF'
-                : formattedCountdown
-              : 'In Transit'}
-          </span>
+          {isRetroOpen ? (
+            <>
+              <span className="font-extrabold text-[#FFD200]">Day {dayNumber} Retro</span>
+              <span className="text-white/60">·</span>
+              <Pause className="w-4 h-4 text-[#FFD200]" />
+              <span className="tabular-nums font-black tracking-wide">ACTIONS PAUSED</span>
+            </>
+          ) : (
+            <>
+              <span className="font-extrabold text-[#48A2D8]">Day {dayNumber}</span>
+              <span className="text-slate-400">·</span>
+              <span>{dayTimeFormatted}</span>
+              <span className="text-slate-400">·</span>
+              <Clock className={`w-4 h-4 ${isUrgent ? 'text-white animate-spin' : 'text-[#E85D04]'}`} />
+              <span className="tabular-nums font-black">
+                {ferryState === 'boarding'
+                  ? isFull
+                    ? 'FULL! CASTING OFF'
+                    : formattedCountdown
+                  : 'In Transit'}
+              </span>
+            </>
+          )}
         </div>
 
         {/* Funds & Pending Accruals Counter with High-Visibility Safety Yellow */}
@@ -334,20 +349,22 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </div>
 
         {/* Speed Controls - Chunky Toy Buttons */}
-        <div className="flex items-center bg-[#1E222A] border-[2px] border-[#1E222A] rounded-2xl p-1 gap-1 shadow-inner">
+        <div className={`flex items-center bg-[#1E222A] border-[2px] border-[#1E222A] rounded-2xl p-1 gap-1 shadow-inner ${isRetroOpen ? 'opacity-50 pointer-events-none' : ''}`}>
           <button
             onClick={() => onSetSpeed(settings.gameSpeed === 0 ? 1 : 0)}
+            disabled={isRetroOpen}
             className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-              settings.gameSpeed === 0 ? 'bg-[#FFD200] text-[#1E222A]' : 'text-slate-300 hover:text-white'
+              settings.gameSpeed === 0 || isRetroOpen ? 'bg-[#FFD200] text-[#1E222A]' : 'text-slate-300 hover:text-white'
             }`}
-            title={settings.gameSpeed === 0 ? 'Resume' : 'Pause'}
+            title={isRetroOpen ? 'Paused during Sprint Retrospective' : settings.gameSpeed === 0 ? 'Resume' : 'Pause'}
           >
-            {settings.gameSpeed === 0 ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
+            {settings.gameSpeed === 0 || isRetroOpen ? <Play className="w-4 h-4 fill-current" /> : <Pause className="w-4 h-4 fill-current" />}
           </button>
           <button
             onClick={() => onSetSpeed(1)}
+            disabled={isRetroOpen}
             className={`px-2 py-1 text-xs font-black rounded-xl transition-all cursor-pointer ${
-              settings.gameSpeed === 1 ? 'bg-[#48A2D8] text-white shadow-sm' : 'text-slate-300 hover:text-white'
+              settings.gameSpeed === 1 && !isRetroOpen ? 'bg-[#48A2D8] text-white shadow-sm' : 'text-slate-300 hover:text-white'
             }`}
             title="1x Normal Speed"
           >
@@ -355,8 +372,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </button>
           <button
             onClick={() => onSetSpeed(2)}
+            disabled={isRetroOpen}
             className={`px-2 py-1 text-xs font-black rounded-xl transition-all cursor-pointer ${
-              settings.gameSpeed === 2 ? 'bg-[#48A2D8] text-white shadow-sm' : 'text-slate-300 hover:text-white'
+              settings.gameSpeed === 2 && !isRetroOpen ? 'bg-[#48A2D8] text-white shadow-sm' : 'text-slate-300 hover:text-white'
             }`}
             title="2x Fast Speed"
           >
@@ -364,8 +382,9 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </button>
           <button
             onClick={() => onSetSpeed(3)}
+            disabled={isRetroOpen}
             className={`p-1.5 rounded-xl transition-all cursor-pointer ${
-              settings.gameSpeed === 3 ? 'bg-[#E85D04] text-white' : 'text-slate-300 hover:text-white'
+              settings.gameSpeed === 3 && !isRetroOpen ? 'bg-[#E85D04] text-white' : 'text-slate-300 hover:text-white'
             }`}
             title="3x Warp Speed"
           >
@@ -386,14 +405,14 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         <div className="flex items-center gap-2">
           <button
             onClick={onLaunchFerry}
-            disabled={!ferryReady}
+            disabled={!ferryReady || isRetroOpen}
             className={`flex items-center gap-2 px-4 py-2 text-xs font-black rounded-2xl border-[2.5px] border-[#1E222A] transition-all whitespace-nowrap cursor-pointer ${
-              ferryReady
+              ferryReady && !isRetroOpen
                 ? 'bg-[#D92525] hover:bg-[#E83C3C] text-white shadow-[0_4px_0_#1E222A] active:translate-y-1 active:shadow-[0_1px_0_#1E222A]'
                 : 'bg-slate-700 text-slate-400 opacity-60 cursor-not-allowed shadow-[0_2px_0_#1E222A]'
             }`}
             style={{ fontFamily: 'var(--font-heading)' }}
-            title="Deploy current sprint release on ferry"
+            title={isRetroOpen ? 'Actions paused during retrospective' : 'Deploy current sprint release on ferry'}
           >
             <Ship className="w-4 h-4 text-[#FFD200]" />
             Deploy ({ferryPoints}/{ferryCapacity} pts)

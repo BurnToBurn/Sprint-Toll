@@ -139,6 +139,7 @@ export default function App() {
         onOpenRetrospective={openLastRetrospective}
         hasLastRetrospective={!!lastSprintSummary}
         ferryReady={ferry.currentPoints > 0 && ferry.state === 'boarding'}
+        isRetroOpen={!!sprintSummary}
       />
 
       {/* Main Content Area with generous 24px-32px padding */}

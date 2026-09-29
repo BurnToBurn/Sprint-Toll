@@ -334,6 +334,7 @@ export function useGameEngine() {
     ferry,
     vehicles,
     settings,
+    sprintSummary: null as SprintSummary | null,
     activeScenario: null as ActiveScenarioState | null,
     activeScenarioDef: null as ScenarioDefinition | null,
     lastSpawnTime: Date.now(),
@@ -350,9 +351,10 @@ export function useGameEngine() {
     stateRef.current.ferry = ferry;
     stateRef.current.vehicles = vehicles;
     stateRef.current.settings = settings;
+    stateRef.current.sprintSummary = sprintSummary;
     stateRef.current.activeScenario = activeScenario;
     stateRef.current.activeScenarioDef = activeScenarioDef;
-  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, activeScenario, activeScenarioDef]);
+  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef]);
 
   // Helper to pick story point with weighted distribution
   const pickRandomStoryPoint = useCallback((): StoryPoint => {
@@ -416,6 +418,7 @@ export function useGameEngine() {
 
   // Spawn vehicle on highway (all vehicles enter through one single feeder lane and spread randomly into available lanes)
   const spawnVehicle = useCallback((customPoints?: StoryPoint, specificLane?: number) => {
+    if (stateRef.current.sprintSummary) return;
     const scenarioDef = stateRef.current.activeScenarioDef;
     let points: StoryPoint;
     if (customPoints) {
@@ -446,6 +449,7 @@ export function useGameEngine() {
 
   // Slicing a large user story into smaller agile user stories!
   const sliceStory = useCallback((vehicleId: string) => {
+    if (stateRef.current.sprintSummary) return;
     setVehicles((prev) => {
       const target = prev.find((v) => v.id === vehicleId);
       if (!target || target.state === 'on_ferry' || target.state === 'departed') return prev;
@@ -581,6 +585,7 @@ export function useGameEngine() {
 
   // Stage a story (like a 5-point story) directly in the parking lot to immediately flow into the toll plaza
   const stageStoryInParkingLot = useCallback((points: StoryPoint = 5, customTitle?: string) => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     const titles5 = [
       'OAuth 2.0 PKCE Session Refresh & Token Revocation',
@@ -625,6 +630,7 @@ export function useGameEngine() {
 
   // Commit sprint planning: convert pre-selected items into staged vehicles in North & South Parking Lots
   const commitSprintPlanning = useCallback(() => {
+    if (stateRef.current.sprintSummary) return;
     const selected = backlogItems.filter((i) => i.selected);
     if (selected.length === 0) return;
 
@@ -670,6 +676,7 @@ export function useGameEngine() {
 
   // Manually dispatch the next staged vehicle from the parking lot onto the highway feeder road
   const dispatchNextFromParkingLot = useCallback(() => {
+    if (stateRef.current.sprintSummary) return;
     setVehicles((prev) => {
       const stagedVehicles = prev.filter((v) => v.state === 'staged');
       if (stagedVehicles.length === 0) return prev;
@@ -696,6 +703,7 @@ export function useGameEngine() {
 
   // Resolve a random incident / blocked lane event (flat tire, breakdown, etc.)
   const resolveBoothIncident = useCallback((boothId: number, useEmergencyFix: boolean = true) => {
+    if (stateRef.current.sprintSummary) return;
     setBooths((prev) =>
       prev.map((b) => {
         if (b.id !== boothId || !b.incident) return b;
@@ -768,6 +776,7 @@ export function useGameEngine() {
 
   // Deploy / Sail the Ferry
   const launchFerry = useCallback((reason: 'full' | 'timer' | 'manual' = 'manual') => {
+    if (stateRef.current.sprintSummary) return;
     const currentFerry = stateRef.current.ferry;
     if (currentFerry.state !== 'boarding' && currentFerry.state !== 'ready') return;
     
@@ -973,6 +982,7 @@ export function useGameEngine() {
     setPendingDailyRevenue(0);
 
     setTotalDeliveredPoints((p) => p + deliveredPoints);
+    stateRef.current.sprintSummary = summary;
     setSprintSummary(summary);
     setLastSprintSummary(summary);
 
@@ -1120,7 +1130,8 @@ export function useGameEngine() {
       const deltaSec = Math.min((now - lastTick) / 1000, 0.1) * stateRef.current.settings.gameSpeed;
       lastTick = now;
 
-      if (stateRef.current.settings.gameSpeed > 0) {
+      // When sprint retro is present on the screen, pause all simulation actions and motion
+      if (stateRef.current.settings.gameSpeed > 0 && !stateRef.current.sprintSummary) {
         updateSimulation(deltaSec);
       }
 
@@ -1802,6 +1813,7 @@ export function useGameEngine() {
 
   // Upgrades: Unlock Booth
   const unlockBooth = useCallback((boothId: number) => {
+    if (stateRef.current.sprintSummary) return;
     const booth = booths.find((b) => b.id === boothId);
     if (!booth || booth.unlocked || funds < booth.unlockCost) return;
 
@@ -1814,6 +1826,7 @@ export function useGameEngine() {
 
   // Upgrades: Upgrade Booth Efficiency (Speed)
   const upgradeBoothEfficiency = useCallback((boothId: number) => {
+    if (stateRef.current.sprintSummary) return;
     const booth = booths.find((b) => b.id === boothId);
     if (!booth) return;
     const cost = Math.round(75 * Math.pow(1.5, booth.efficiencyLevel));
@@ -1830,6 +1843,7 @@ export function useGameEngine() {
 
   // Upgrades: Upgrade Booth Automation (E-ZPass)
   const upgradeBoothAutomation = useCallback((boothId: number) => {
+    if (stateRef.current.sprintSummary) return;
     const booth = booths.find((b) => b.id === boothId);
     if (!booth) return;
     const cost = Math.round(150 * Math.pow(1.7, booth.automationLevel));
@@ -1846,6 +1860,7 @@ export function useGameEngine() {
 
   // Upgrades: Upgrade Booth Training (XP Booster)
   const upgradeBoothTraining = useCallback((boothId: number) => {
+    if (stateRef.current.sprintSummary) return;
     const booth = booths.find((b) => b.id === boothId);
     if (!booth) return;
     const cost = Math.round(100 * Math.pow(1.6, booth.trainingLevel));
@@ -1862,6 +1877,7 @@ export function useGameEngine() {
 
   // Upgrades: Upgrade Ferry Capacity
   const upgradeFerryCapacity = useCallback(() => {
+    if (stateRef.current.sprintSummary) return;
     const cost = Math.round(120 * Math.pow(1.6, ferry.capacityLevel));
     if (funds < cost) return;
 
@@ -1876,6 +1892,7 @@ export function useGameEngine() {
 
   // Upgrades: Upgrade Ferry Speed
   const upgradeFerrySpeed = useCallback(() => {
+    if (stateRef.current.sprintSummary) return;
     const cost = Math.round(150 * Math.pow(1.7, ferry.speedLevel));
     if (funds < cost) return;
 
@@ -1889,6 +1906,7 @@ export function useGameEngine() {
 
   // Upgrades: Upgrade Ferry Amenities (Sprint Completion Bonus)
   const upgradeFerryAmenities = useCallback(() => {
+    if (stateRef.current.sprintSummary) return;
     const cost = Math.round(200 * Math.pow(1.8, ferry.amenitiesLevel));
     if (funds < cost) return;
 
@@ -1902,6 +1920,7 @@ export function useGameEngine() {
 
   // Configure lane WIP Limit (Kanban limit)
   const setLaneWipLimit = useCallback((boothId: number, newLimit: number) => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     setBooths((prev) =>
       prev.map((b) => (b.id === boothId ? { ...b, wipLimit: Math.max(1, Math.min(8, newLimit)) } : b))
@@ -1910,6 +1929,7 @@ export function useGameEngine() {
 
   // Configure lane specialization (Expedite / Heavy / All)
   const setLaneSpecialization = useCallback((boothId: number, spec: LaneSpecialization) => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     setBooths((prev) =>
       prev.map((b) => (b.id === boothId ? { ...b, specialization: spec } : b))
@@ -1918,6 +1938,7 @@ export function useGameEngine() {
 
   // Toggle Auto-depart setting
   const toggleAutoDepart = useCallback((type: 'onFull' | 'onTimer') => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     setFerry((prev) => ({
       ...prev,
@@ -1934,17 +1955,20 @@ export function useGameEngine() {
 
   // Settings: change game speed
   const setGameSpeed = useCallback((speed: number) => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     setSettings((s) => ({ ...s, gameSpeed: speed }));
   }, []);
 
   // Add funds directly (e.g. from quiz or bonus)
   const addFunds = useCallback((amount: number) => {
+    if (stateRef.current.sprintSummary) return;
     setFunds((f) => f + amount);
   }, []);
 
   // Set daily cycle duration (e.g. 30s, 45s, 60s, 90s)
   const setDailyDuration = useCallback((seconds: number) => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     setFerry((prev) => ({
       ...prev,
@@ -1955,6 +1979,7 @@ export function useGameEngine() {
 
   // Toggle Continuous Flow of Traffic Mode
   const toggleContinuousFlowMode = useCallback(() => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     setSettings((s) => ({
       ...s,
@@ -1962,13 +1987,23 @@ export function useGameEngine() {
     }));
   }, []);
 
+  // Dismiss or set sprint retrospective report with stateRef synchronization
+  const updateSprintSummary = useCallback((summary: SprintSummary | null) => {
+    stateRef.current.sprintSummary = summary;
+    if (!summary) {
+      stateRef.current.lastSpawnTime = Date.now();
+      lastParkingReleaseTimeRef.current = Date.now();
+    }
+    setSprintSummary(summary);
+  }, []);
+
   // Open the most recent sprint retrospective report
   const openLastRetrospective = useCallback(() => {
     if (lastSprintSummary) {
       sound.playClick();
-      setSprintSummary(lastSprintSummary);
+      updateSprintSummary(lastSprintSummary);
     }
-  }, [lastSprintSummary]);
+  }, [lastSprintSummary, updateSprintSummary]);
 
   // Daily Forecast: Predicts incoming story volume for next sprint based on current throughput
   const dailyForecast: DailyForecast = useMemo(() => {
@@ -2062,6 +2097,7 @@ export function useGameEngine() {
 
   // Apply recommended WIP limit across all unlocked booths
   const applyRecommendedWipLimit = useCallback((customLimit?: number) => {
+    if (stateRef.current.sprintSummary) return;
     sound.playClick();
     const targetLimit = customLimit ?? dailyForecast.recommendedLaneWipLimit;
     setBooths((prev) =>
@@ -2071,6 +2107,7 @@ export function useGameEngine() {
 
   // Start a predetermined tech scenario
   const startScenario = useCallback((def: ScenarioDefinition) => {
+    if (stateRef.current.sprintSummary) return;
     sound.playLevelUp();
     setActiveScenarioDef(def);
     const newScenarioState: ActiveScenarioState = {
@@ -2259,7 +2296,7 @@ export function useGameEngine() {
     setGameSpeed,
     setSelectedVehicle,
     setSelectedBoothId,
-    setSprintSummary,
+    setSprintSummary: updateSprintSummary,
     openLastRetrospective
   };
 }

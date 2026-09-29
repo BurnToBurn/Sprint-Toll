@@ -19,7 +19,8 @@ import {
   CheckSquare,
   ShieldCheck,
   Flag,
-  Receipt
+  Receipt,
+  Pause
 } from 'lucide-react';
 
 interface SprintRetrospectiveModalProps {
@@ -89,12 +90,16 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                 <Ship className="w-7 h-7" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 flex-wrap">
                   <span className="text-xs font-mono font-black text-[#E85D04] uppercase tracking-wider">
                     Sprint #{summary.sprintNumber} Retrospective
                   </span>
                   <span className="text-xs px-2.5 py-0.5 rounded-lg bg-[#FFD200] text-[#1E222A] font-mono font-black border border-[#1E222A]">
                     Day #{summary.dayNumber}
+                  </span>
+                  <span className="text-xs px-2.5 py-0.5 rounded-lg bg-[#D92525] text-white font-mono font-black border border-[#1E222A] flex items-center gap-1 shadow-sm animate-pulse">
+                    <Pause className="w-3 h-3 fill-current" />
+                    SIMULATION &amp; ACTIONS PAUSED
                   </span>
                 </div>
                 <h2
