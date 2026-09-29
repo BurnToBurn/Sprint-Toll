@@ -5,7 +5,7 @@ import {defineConfig} from 'vite';
 
 export default defineConfig(() => {
   return {
-    base: process.env.GITHUB_ACTIONS ? '/Sprint-Toll-Hosting/' : '/',
+    base: process.env.GITHUB_ACTIONS ? '/Sprint-Toll/' : '/',
     plugins: [react(), tailwindcss()],
     resolve: {
       alias: {
