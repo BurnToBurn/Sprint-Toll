@@ -122,7 +122,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   }, [booths, vehicles, metrics]);
 
   return (
-    <div className="relative w-full h-[570px] bg-[#2B2F38] border-[3px] border-[#1E222A] rounded-3xl overflow-hidden shadow-[0_8px_0_#1E222A] flex flex-col select-none">
+    <div className="relative w-full h-[740px] sm:h-[760px] bg-[#2B2F38] border-[3px] border-[#1E222A] rounded-3xl overflow-hidden shadow-[0_8px_0_#1E222A] flex flex-col select-none">
       {/* Decorative Corner Rivets */}
       <div className="rivet top-2.5 left-2.5" />
       <div className="rivet top-2.5 right-2.5" />
@@ -265,7 +265,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               onClick={onOpenSprintPlanning}
               className="px-3 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs flex items-center gap-1.5 border border-[#1E222A] shadow cursor-pointer transition-all"
             >
-              <span>📋 Open Sprint Planning</span>
+              <span>🅿️ Parking Lot Staging</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           )}
@@ -1392,10 +1392,10 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             <button
               onClick={onOpenSprintPlanning}
               className="px-3.5 py-1.5 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] border-2 border-[#1E222A] transition-all flex items-center gap-1.5 font-mono font-black text-xs cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
-              title="Open Sprint Planning to stage backlog items into the Parking Lot"
+              title="Open Parking Lot Staging to stage backlog items into the Parking Lot bays"
             >
               <ClipboardList className="w-4 h-4 text-[#1E222A]" />
-              <span>📋 Plan Sprint</span>
+              <span>🅿️ Parking Lot Staging</span>
             </button>
           )}
 
