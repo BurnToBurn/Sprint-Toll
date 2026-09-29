@@ -48,9 +48,9 @@ interface UpgradePanelProps {
 }
 
 export const UpgradePanel: React.FC<UpgradePanelProps> = ({
-  booths,
+  booths = [],
   ferry,
-  funds,
+  funds = 0,
   pendingDailyRevenue = 0,
   dailyDues,
   selectedBoothId,
@@ -74,32 +74,73 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'booths' | 'ferry'>('booths');
 
-  if (isOpen !== undefined && !isOpen) {
-    return null;
-  }
-
-  // Currently focused booth
-  const focusedBooth = booths.find((b) => b.id === (selectedBoothId ?? 0)) || booths[0];
-
   React.useEffect(() => {
-    if (!isOpen) return;
+    if (isOpen === false) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && onClose) {
         onClose();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener('keydown', handleKeyDown);
+    };
   }, [isOpen, onClose]);
 
-  // Upgrade costs
-  const efficiencyCost = Math.round(75 * Math.pow(1.5, focusedBooth.efficiencyLevel));
-  const automationCost = Math.round(150 * Math.pow(1.7, focusedBooth.automationLevel));
-  const trainingCost = Math.round(100 * Math.pow(1.6, focusedBooth.trainingLevel));
+  if (isOpen !== undefined && !isOpen) {
+    return null;
+  }
 
-  const ferryCapacityCost = Math.round(120 * Math.pow(1.6, ferry.capacityLevel));
-  const ferrySpeedCost = Math.round(150 * Math.pow(1.7, ferry.speedLevel));
-  const ferryAmenitiesCost = Math.round(200 * Math.pow(1.8, ferry.amenitiesLevel));
+  // Fallback booth in case booths array is empty or booth is not found
+  const fallbackBooth: TollBooth = booths[0] || {
+    id: 0,
+    name: 'Lane 1 · Alpha Squad',
+    unlocked: true,
+    unlockCost: 0,
+    level: 1,
+    xp: 0,
+    xpToNextLevel: 100,
+    multiplier: 1.0,
+    efficiencyLevel: 1,
+    automationLevel: 1,
+    trainingLevel: 1,
+    wipLimit: 4,
+    specialization: 'all',
+    currentVehicleId: null,
+    processingProgress: 0,
+    processingDuration: 0,
+    isProcessing: false,
+    barrierRaised: false,
+    cooldownTimer: 0,
+    cooldownDuration: 3.5,
+    incident: null,
+    timeSinceLastIncident: 0,
+    totalProcessedCount: 0,
+    totalPointsProcessed: 0,
+    totalRevenueGenerated: 0
+  };
+
+  // Currently focused booth
+  const focusedBooth = booths.find((b) => b.id === (selectedBoothId ?? 0)) || booths[0] || fallbackBooth;
+
+  // Upgrade costs with safe fallback levels
+  const effLevel = focusedBooth.efficiencyLevel ?? 1;
+  const autoLevel = focusedBooth.automationLevel ?? 1;
+  const trainLevel = focusedBooth.trainingLevel ?? 1;
+  const efficiencyCost = Math.round(75 * Math.pow(1.5, effLevel));
+  const automationCost = Math.round(150 * Math.pow(1.7, autoLevel));
+  const trainingCost = Math.round(100 * Math.pow(1.6, trainLevel));
+
+  const capLevel = ferry?.capacityLevel ?? 1;
+  const spdLevel = ferry?.speedLevel ?? 1;
+  const amenLevel = ferry?.amenitiesLevel ?? 1;
+  const ferryCapacityCost = Math.round(120 * Math.pow(1.6, capLevel));
+  const ferrySpeedCost = Math.round(150 * Math.pow(1.7, spdLevel));
+  const ferryAmenitiesCost = Math.round(200 * Math.pow(1.8, amenLevel));
 
   const panelContent = (
     <div className="bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl p-6 sm:p-8 text-[#1E222A] space-y-6 shadow-[0_8px_0_#1E222A] relative w-full">
@@ -256,24 +297,24 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
                     <h3 className="text-lg font-black text-[#1E222A] flex items-center gap-2" style={{ fontFamily: 'var(--font-heading)' }}>
                       {focusedBooth.name}
                       <span className="text-xs font-mono font-black text-[#1E222A] bg-[#FFD200] px-2.5 py-0.5 rounded-xl border-2 border-[#1E222A]">
-                        x{focusedBooth.multiplier.toFixed(2)} Multiplier
+                        x{(focusedBooth.multiplier ?? 1.0).toFixed(2)} Multiplier
                       </span>
                     </h3>
                     <p className="text-xs text-slate-600 font-semibold mt-1">
-                      Earns +{Math.round((focusedBooth.multiplier - 1) * 100)}% revenue &amp; points bonus with team experience.
+                      Earns +{Math.round(((focusedBooth.multiplier ?? 1.0) - 1) * 100)}% revenue &amp; points bonus with team experience.
                     </p>
                   </div>
 
                   {/* XP Bar */}
                   <div className="text-right shrink-0">
                     <div className="text-xs font-mono font-bold text-slate-700">
-                      Level {focusedBooth.level} · {focusedBooth.xp} / {focusedBooth.xpToNextLevel} XP
+                      Level {focusedBooth.level ?? 1} · {focusedBooth.xp ?? 0} / {focusedBooth.xpToNextLevel || 100} XP
                     </div>
                     <div className="w-48 h-3 bg-slate-200 border-2 border-[#1E222A] rounded-full mt-1.5 overflow-hidden p-0.5">
                       <div
                         className="h-full bg-[#FFD200] rounded-full transition-all duration-300"
                         style={{
-                          width: `${Math.min(100, (focusedBooth.xp / focusedBooth.xpToNextLevel) * 100)}%`
+                          width: `${Math.min(100, (((focusedBooth.xp ?? 0) / (focusedBooth.xpToNextLevel || 100)) * 100))}%`
                         }}
                       />
                     </div>
@@ -288,7 +329,7 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
                       Turnaround Cooldown:
                     </span>
                     <span className="font-mono font-black text-[#1E222A] bg-[#FFD200] px-2 py-0.5 rounded-lg border border-[#1E222A]">
-                      {focusedBooth.cooldownDuration.toFixed(1)}s
+                      {(focusedBooth.cooldownDuration ?? 3.5).toFixed(1)}s
                     </span>
                     <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
                       (Reduces with level: Lvl 1 = 3.5s → Lvl 8+ = 0.1s)
@@ -523,7 +564,7 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
                   <Ship className="w-5 h-5 text-[#48A2D8]" />
                 </div>
                 <div className="text-2xl font-black text-[#48A2D8] font-mono mt-1">
-                  {ferry.capacity} <span className="text-xs font-bold text-slate-500">pts</span>
+                  {ferry?.capacity ?? 40} <span className="text-xs font-bold text-slate-500">pts</span>
                 </div>
                 <p className="text-xs text-slate-600 font-medium mt-1">
                   Allows larger sprint releases (+25 story points per tier).
@@ -556,10 +597,10 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
                   <Zap className="w-5 h-5 text-[#E85D04]" />
                 </div>
                 <div className="text-2xl font-black text-[#E85D04] font-mono mt-1">
-                  Tier {ferry.speedLevel}
+                  Tier {ferry?.speedLevel ?? 1}
                 </div>
                 <p className="text-xs text-slate-600 font-medium mt-1">
-                  +{ferry.speedLevel * 30}% faster ferry voyage &amp; turnaround back to dock.
+                  +{((ferry?.speedLevel ?? 1) * 30)}% faster ferry voyage &amp; turnaround back to dock.
                 </p>
                 <div className="mt-2 text-[10px] font-mono font-bold text-amber-900 bg-amber-100/80 px-2 py-0.5 rounded border border-amber-300">
                   Daily Due: +$20/tier turbine maintenance
@@ -589,7 +630,7 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
                   <Sparkles className="w-5 h-5 text-[#FFD200]" />
                 </div>
                 <div className="text-2xl font-black text-[#1E222A] font-mono mt-1">
-                  +{(ferry.amenitiesLevel - 1) * 35}% Bonus
+                  +{(((ferry?.amenitiesLevel ?? 1) - 1) * 35)}% Bonus
                 </div>
                 <p className="text-xs text-slate-600 font-medium mt-1">
                   Higher stakeholder satisfaction payout on every sprint release!
@@ -639,7 +680,7 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
                   key={opt.sec}
                   onClick={() => onSetDailyDuration && onSetDailyDuration(opt.sec)}
                   className={`px-3 py-1.5 text-xs font-mono font-black rounded-xl border-2 border-[#1E222A] transition-all cursor-pointer ${
-                    ferry.sprintDuration === opt.sec
+                    (ferry?.sprintDuration ?? 45) === opt.sec
                       ? 'bg-[#FFD200] text-[#1E222A] shadow-[0_2px_0_#1E222A]'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                   }`}
@@ -666,27 +707,27 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
               <button
                 onClick={() => onToggleAutoDepart('onFull')}
                 className={`px-3.5 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_2px_0_#1E222A] ${
-                  ferry.autoDepartOnFull
+                  ferry?.autoDepartOnFull
                     ? 'bg-[#48A2D8] text-white'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
                 style={{ fontFamily: 'var(--font-heading)' }}
               >
-                <CheckCircle2 className={`w-4 h-4 ${ferry.autoDepartOnFull ? 'text-[#FFD200]' : 'text-slate-400'}`} />
-                Depart when Full ({ferry.capacity} pts)
+                <CheckCircle2 className={`w-4 h-4 ${ferry?.autoDepartOnFull ? 'text-[#FFD200]' : 'text-slate-400'}`} />
+                Depart when Full ({ferry?.capacity ?? 40} pts)
               </button>
 
               <button
                 onClick={() => onToggleAutoDepart('onTimer')}
                 className={`px-3.5 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] transition-all flex items-center gap-1.5 cursor-pointer shadow-[0_2px_0_#1E222A] ${
-                  ferry.autoDepartOnTimer
+                  ferry?.autoDepartOnTimer
                     ? 'bg-[#FFD200] text-[#1E222A]'
                     : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
                 }`}
                 style={{ fontFamily: 'var(--font-heading)' }}
               >
-                <CheckCircle2 className={`w-4 h-4 ${ferry.autoDepartOnTimer ? 'text-[#1E222A]' : 'text-slate-400'}`} />
-                Depart on Timer ({Math.ceil(ferry.sprintTimer)}s)
+                <CheckCircle2 className={`w-4 h-4 ${ferry?.autoDepartOnTimer ? 'text-[#1E222A]' : 'text-slate-400'}`} />
+                Depart on Timer ({Math.ceil(ferry?.sprintTimer ?? 45)}s)
               </button>
             </div>
           </div>
@@ -726,12 +767,12 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
   if (isOpen !== undefined) {
     return (
       <div
-        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200"
+        className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200"
         onClick={(e) => {
           if (e.target === e.currentTarget && onClose) onClose();
         }}
       >
-        <div className="relative w-full max-w-5xl my-8 max-h-[90vh] overflow-y-auto rounded-3xl">
+        <div className="relative w-full max-w-5xl my-auto max-h-[92vh] overflow-y-auto rounded-3xl shadow-2xl">
           {panelContent}
         </div>
       </div>

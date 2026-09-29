@@ -23,7 +23,8 @@ import {
   Sliders,
   Check,
   Info,
-  X
+  X,
+  Wrench
 } from 'lucide-react';
 import { PREDETERMINED_SCENARIOS } from '../data/scenarios';
 import { ScenarioDefinition, ScenarioDifficulty } from '../types/scenarios';
@@ -49,6 +50,7 @@ interface MainMenuProps {
   onSelectScenario: (scenario: ScenarioDefinition) => void;
   onOpenAcademy: () => void;
   onOpenSprintPlanning: () => void;
+  onOpenUpgrades?: () => void;
   onToggleSound: () => void;
   onToggleContinuousFlow: () => void;
   onSetGameSpeed: (speed: number) => void;
@@ -101,6 +103,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   onSelectScenario,
   onOpenAcademy,
   onOpenSprintPlanning,
+  onOpenUpgrades,
   onToggleSound,
   onToggleContinuousFlow,
   onSetGameSpeed
@@ -189,7 +192,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             {/* HEXperience Corporate Identity Pill in Huntington Bank Colors */}
             <div
               className="flex items-center gap-2 px-3 py-1.5 bg-[#004831] border-2 border-[#66BD29] rounded-xl shadow-[0_2px_0_#1E222A]"
-              title="Engineered by HEXperience · Huntington Bank Colorway Spec"
+              title="Engineered by HEXperience · Huntington Bank Colorway"
             >
               <Hexagon className="w-4 h-4 text-[#66BD29] fill-[#66BD29]/20" />
               <span className="text-xs font-mono font-black text-white tracking-tight">
@@ -201,7 +204,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
             </div>
 
             <span className="hidden sm:inline-block text-xs font-mono text-slate-400 font-bold">
-              Sprint Tolls v2.4.0 &bull; Flow Simulator
+              Sprint Tolls v1.0.0 &bull; Flow Simulator
             </span>
           </div>
 
@@ -673,8 +676,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </div>
             </div>
 
-            {/* Quick Secondary Support Dock: Agile Academy & Sprint Planning */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Quick Secondary Support Dock: Agile Academy, Sprint Planning & Upgrades */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <button
                 onClick={() => {
                   sound.playClick();
@@ -687,10 +690,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 </div>
                 <div>
                   <div className="text-sm font-black text-[#FFD200]" style={{ fontFamily: 'var(--font-heading)' }}>
-                    Agile Academy & Quizzes
+                    Agile Academy &amp; Quizzes
                   </div>
                   <div className="text-xs text-slate-300 font-medium">
-                    Learn Little's Law, WIP discipline, and earn up to $150 in bonus starting treasury!
+                    Learn Little's Law, WIP discipline, and earn bonus treasury!
                   </div>
                 </div>
               </button>
@@ -707,10 +710,30 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                 </div>
                 <div>
                   <div className="text-sm font-black text-white" style={{ fontFamily: 'var(--font-heading)' }}>
-                    Sprint Planning & Backlog
+                    Parking Lot Staging
                   </div>
                   <div className="text-xs text-slate-300 font-medium">
-                    Curate user stories from the backlog and commit batch sizes before launch.
+                    Stage stories from the backlog and commit batches before launch.
+                  </div>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  sound.playClick();
+                  if (onOpenUpgrades) onOpenUpgrades();
+                }}
+                className="p-4 rounded-2xl bg-[#1E222A] border-[2.5px] border-[#1E222A] hover:border-[#E85D04] text-white flex items-center gap-3.5 shadow-[0_4px_0_#1E222A] active:translate-y-0.5 cursor-pointer text-left transition-all group"
+              >
+                <div className="w-11 h-11 rounded-2xl bg-[#E85D04] text-white border-2 border-[#1E222A] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                  <Wrench className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <div className="text-sm font-black text-[#FFD200]" style={{ fontFamily: 'var(--font-heading)' }}>
+                    Harbor Works &amp; Upgrades
+                  </div>
+                  <div className="text-xs text-slate-300 font-medium">
+                    Upgrade booth multipliers, automated E-ZPass gates, and ferry capacity.
                   </div>
                 </div>
               </button>
@@ -880,9 +903,23 @@ export const MainMenu: React.FC<MainMenuProps> = ({
 
               {/* Step 5 */}
               <div className="p-4 rounded-2xl bg-white border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] space-y-2 md:col-span-2">
-                <div className="flex items-center gap-2 font-black text-sm text-[#1E222A]" style={{ fontFamily: 'var(--font-heading)' }}>
-                  <span className="w-6 h-6 rounded-lg bg-[#D92525] text-white flex items-center justify-center font-mono text-xs border border-[#1E222A]">5</span>
-                  <span>Flow Efficiency & Harbor Works Upgrades</span>
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2 font-black text-sm text-[#1E222A]" style={{ fontFamily: 'var(--font-heading)' }}>
+                    <span className="w-6 h-6 rounded-lg bg-[#D92525] text-white flex items-center justify-center font-mono text-xs border border-[#1E222A]">5</span>
+                    <span>Flow Efficiency &amp; Harbor Works Upgrades</span>
+                  </div>
+                  {onOpenUpgrades && (
+                    <button
+                      onClick={() => {
+                        sound.playClick();
+                        onOpenUpgrades();
+                      }}
+                      className="px-3 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] border border-[#1E222A] text-[#1E222A] font-black text-xs cursor-pointer flex items-center gap-1.5 shadow-[0_2px_0_#1E222A]"
+                    >
+                      <Wrench className="w-3.5 h-3.5" />
+                      <span>Configure Upgrades</span>
+                    </button>
+                  )}
                 </div>
                 <p>
                   Maintain Flow Efficiency above 40% (Touch Time vs Wait Time) to prevent municipal efficiency surcharges. Reinvest banked earnings in Harbor Works to unlock additional lanes, upgrade booth automation to E-ZPass, and expand ferry capacity!
@@ -1036,7 +1073,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
         <footer className="flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-400 font-mono pt-2 border-t border-slate-700/60">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-[#66BD29]" />
-            <span>Official HEXperience Agile Simulation Suite &bull; Huntington Bank Spec</span>
+            <span>Official HEXperience Agile Simulation Suite &bull; Huntington Bank</span>
           </div>
 
           <div className="flex items-center gap-3">

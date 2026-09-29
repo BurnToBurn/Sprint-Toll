@@ -28,11 +28,7 @@ export const ScenarioOutcomeModal: React.FC<ScenarioOutcomeModalProps> = ({
   onReturnToFreePlay,
   onReturnToMainMenu
 }) => {
-  if (!scenarioState || !scenarioDef || scenarioState.status === 'active') {
-    return null;
-  }
-
-  const isWin = scenarioState.status === 'victory';
+  const isWin = scenarioState?.status === 'victory';
 
   useEffect(() => {
     if (isWin) {
@@ -47,6 +43,10 @@ export const ScenarioOutcomeModal: React.FC<ScenarioOutcomeModalProps> = ({
       }
     }
   }, [isWin]);
+
+  if (!scenarioState || !scenarioDef || scenarioState.status === 'active') {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-md animate-fadeIn">

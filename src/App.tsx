@@ -196,6 +196,7 @@ export default function App() {
               onResolveIncident={resolveBoothIncident}
               onDispatchFromParkingLot={dispatchNextFromParkingLot}
               onOpenSprintPlanning={openSprintPlanning}
+              onOpenUpgrades={() => setIsUpgradesOpen(true)}
             />
           </div>
         )}
@@ -214,31 +215,33 @@ export default function App() {
 
       {/* Modals & Overlays */}
       {/* Harbor Works & Upgrades Modal */}
-      <UpgradePanel
-        isOpen={isUpgradesOpen}
-        onClose={() => setIsUpgradesOpen(false)}
-        booths={booths}
-        ferry={ferry}
-        funds={funds}
-        pendingDailyRevenue={pendingDailyRevenue}
-        dailyDues={dailyDues}
-        selectedBoothId={selectedBoothId}
-        onSelectBooth={setSelectedBoothId}
-        onUnlockBooth={unlockBooth}
-        onUpgradeEfficiency={upgradeBoothEfficiency}
-        onUpgradeAutomation={upgradeBoothAutomation}
-        onUpgradeTraining={upgradeBoothTraining}
-        onUpgradeFerryCapacity={upgradeFerryCapacity}
-        onUpgradeFerrySpeed={upgradeFerrySpeed}
-        onUpgradeFerryAmenities={upgradeFerryAmenities}
-        onSetWipLimit={setLaneWipLimit}
-        onSetSpecialization={setLaneSpecialization}
-        onToggleAutoDepart={toggleAutoDepart}
-        onSetDailyDuration={setDailyDuration}
-        continuousFlowMode={settings.continuousFlowMode}
-        onToggleContinuousFlow={toggleContinuousFlowMode}
-        onResolveIncident={resolveBoothIncident}
-      />
+      {isUpgradesOpen && (
+        <UpgradePanel
+          isOpen={isUpgradesOpen}
+          onClose={() => setIsUpgradesOpen(false)}
+          booths={booths}
+          ferry={ferry}
+          funds={funds}
+          pendingDailyRevenue={pendingDailyRevenue}
+          dailyDues={dailyDues}
+          selectedBoothId={selectedBoothId}
+          onSelectBooth={setSelectedBoothId}
+          onUnlockBooth={unlockBooth}
+          onUpgradeEfficiency={upgradeBoothEfficiency}
+          onUpgradeAutomation={upgradeBoothAutomation}
+          onUpgradeTraining={upgradeBoothTraining}
+          onUpgradeFerryCapacity={upgradeFerryCapacity}
+          onUpgradeFerrySpeed={upgradeFerrySpeed}
+          onUpgradeFerryAmenities={upgradeFerryAmenities}
+          onSetWipLimit={setLaneWipLimit}
+          onSetSpecialization={setLaneSpecialization}
+          onToggleAutoDepart={toggleAutoDepart}
+          onSetDailyDuration={setDailyDuration}
+          continuousFlowMode={settings.continuousFlowMode}
+          onToggleContinuousFlow={toggleContinuousFlowMode}
+          onResolveIncident={resolveBoothIncident}
+        />
+      )}
       <SprintPlanningModal
         isOpen={isSprintPlanningOpen}
         onClose={closeSprintPlanning}
@@ -324,6 +327,10 @@ export default function App() {
         onOpenSprintPlanning={() => {
           openSprintPlanning();
           closeMainMenu();
+        }}
+        onOpenUpgrades={() => {
+          closeMainMenu();
+          setIsUpgradesOpen(true);
         }}
         onToggleSound={toggleSound}
         onToggleContinuousFlow={toggleContinuousFlowMode}

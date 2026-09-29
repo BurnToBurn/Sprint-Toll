@@ -1399,6 +1399,17 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             </button>
           )}
 
+          {onOpenUpgrades && (
+            <button
+              onClick={onOpenUpgrades}
+              className="px-3.5 py-1.5 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] border-2 border-[#1E222A] transition-all flex items-center gap-1.5 font-mono font-black text-xs cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
+              title="Open Harbor Works & Upgrades: Upgrade toll booths, efficiency, automation, and ferry vessel"
+            >
+              <Wrench className="w-4 h-4 text-[#1E222A]" />
+              <span>Upgrades</span>
+            </button>
+          )}
+
           {stagedVehicles.length > 0 && onDispatchFromParkingLot && (
             <button
               onClick={onDispatchFromParkingLot}

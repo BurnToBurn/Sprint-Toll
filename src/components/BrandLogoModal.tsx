@@ -627,7 +627,7 @@ export const BrandLogoModal: React.FC<BrandLogoModalProps> = ({ isOpen, onClose 
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2 font-mono font-black text-xs text-[#66BD29] uppercase tracking-wider">
                 <Palette className="w-4 h-4" />
-                <span>Huntington Bank Official Brand Color Specs</span>
+                <span>Huntington Bank Official Brand Colors</span>
               </div>
               <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#66BD29] text-[#003624] font-black">
                 Click color to copy HEX
