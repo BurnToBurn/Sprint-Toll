@@ -1,0 +1,6 @@
+{
+  "name": "Sprint Tolls - Agile Flow & Toll Simulator",
+  "description": "A project management simulation game where you manage toll booths, story point vehicles, and ferry departures while mastering flow efficiency, WIP limits, and Little's Law.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

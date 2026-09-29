@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Titan One', 'Fredoka', cursive, sans-serif;
+  --font-heading: 'Fredoka', 'Titan One', cursive, sans-serif;
+  --font-sans: 'Nunito', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --color-port-yellow: #FFD200;
+  --color-port-orange: #E85D04;
+  --color-port-red: #D92525;
+  --color-port-blue: #48A2D8;
+  --color-port-charcoal: #2B2F38;
+  --color-port-border: #1E222A;
+  --color-port-steel: #F4F6F9;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: #2B2F38;
+  color: #1E222A;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Heading styles */
+h1, h2, h3, .font-display {
+  font-family: var(--font-heading);
+  letter-spacing: -0.01em;
+}
+
+/* Tactical 3D Port Toys & Cards */
+.port-container {
+  background-color: #F4F6F9;
+  border: 3px solid #1E222A;
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 0 #1E222A;
+  position: relative;
+}
+
+.port-container-dark {
+  background-color: #2B2F38;
+  border: 3px solid #1E222A;
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 0 #1E222A;
+  color: #F4F6F9;
+  position: relative;
+}
+
+.port-container-yellow {
+  background-color: #FFD200;
+  border: 3px solid #1E222A;
+  border-radius: 1.5rem;
+  box-shadow: 0 8px 0 #1E222A;
+  color: #1E222A;
+  position: relative;
+}
+
+.port-btn {
+  font-family: var(--font-heading);
+  border: 3px solid #1E222A;
+  border-radius: 1rem;
+  box-shadow: 0 4px 0 #1E222A;
+  transition: all 0.1s ease-out;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+.port-btn:hover {
+  filter: brightness(1.06);
+}
+
+.port-btn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #1E222A;
+}
+
+.port-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: 0 4px 0 #1E222A;
+  filter: grayscale(0.4);
+}
+
+/* Industrial Rivet/Bolt accents */
+.rivet {
+  width: 9px;
+  height: 9px;
+  border-radius: 9999px;
+  background: radial-gradient(circle at 35% 35%, #ffffff 0%, #cbd5e1 45%, #94a3b8 90%);
+  border: 1.5px solid #1E222A;
+  box-shadow: inset 0 1px 1px rgba(255,255,255,0.8), 0 1px 1px rgba(0,0,0,0.3);
+  position: absolute;
+  pointer-events: none;
+  z-index: 10;
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #2B2F38;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb {
+  background: #FFD200;
+  border: 2px solid #1E222A;
+  border-radius: 6px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #E85D04;
+}
+
