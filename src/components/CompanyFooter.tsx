@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Hexagon, ShieldCheck, Info, Award, X } from 'lucide-react';
+import { Hexagon, ShieldCheck, Info, Award, X, Download } from 'lucide-react';
+import { BrandLogoModal } from './BrandLogoModal';
 
 export const CompanyFooter: React.FC = () => {
   const [showCompanyModal, setShowCompanyModal] = useState(false);
+  const [showLogoModal, setShowLogoModal] = useState(false);
 
   return (
     <>
@@ -88,6 +90,15 @@ export const CompanyFooter: React.FC = () => {
               </div>
 
               <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2 text-xs">
+                <button
+                  onClick={() => setShowLogoModal(true)}
+                  className="px-3 py-1.5 rounded-xl bg-[#66BD29] hover:bg-[#77D236] text-[#003624] font-black text-[11px] border-2 border-[#1E222A] transition-all flex items-center gap-1.5 shadow-[0_2px_0_#1E222A] active:translate-y-0.5 cursor-pointer"
+                  title="Download brand logos in SVG and high-resolution PNG format"
+                >
+                  <Download className="w-3.5 h-3.5 text-[#003624]" />
+                  <span>Download Brand Logo</span>
+                </button>
+
                 <button
                   onClick={() => setShowCompanyModal(true)}
                   className="px-3 py-1.5 rounded-xl bg-[#003624] hover:bg-[#00271a] text-white border-2 border-[#66BD29] font-bold text-[11px] transition-all flex items-center gap-1.5 shadow-[0_2px_0_#1E222A] active:translate-y-0.5 cursor-pointer"
@@ -220,6 +231,12 @@ export const CompanyFooter: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Brand Logo & Asset Download Modal */}
+      <BrandLogoModal
+        isOpen={showLogoModal}
+        onClose={() => setShowLogoModal(false)}
+      />
     </>
   );
 };

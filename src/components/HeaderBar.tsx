@@ -14,7 +14,8 @@ import {
   TrendingUp,
   Columns3,
   Hexagon,
-  Flag
+  Flag,
+  Wrench
 } from 'lucide-react';
 import { GameSettings, FerryDock, DailyForecast } from '../types/game';
 
@@ -34,13 +35,17 @@ interface HeaderBarProps {
   forecast: DailyForecast;
   onOpenForecast: () => void;
   onOpenScenarios?: () => void;
+  onOpenSprintPlanning?: () => void;
+  onOpenUpgrades?: () => void;
+  hasAffordableUpgrades?: boolean;
   activeScenarioTitle?: string;
   activeScenarioDay?: number;
   activeScenarioTotalDays?: number;
   onTabChange: (tab: 'simulation' | 'kanban' | 'academy' | 'metrics') => void;
   onToggleSound: () => void;
   onSetSpeed: (speed: number) => void;
-  onQuickSpawn: () => void;
+  onQuickSpawn?: () => void;
+  onSpawn5Pt?: () => void;
   onLaunchFerry: () => void;
   onToggleContinuousFlow?: () => void;
   onOpenRetrospective?: () => void;
@@ -64,13 +69,17 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   forecast,
   onOpenForecast,
   onOpenScenarios,
+  onOpenSprintPlanning,
+  onOpenUpgrades,
+  hasAffordableUpgrades = false,
   activeScenarioTitle,
   activeScenarioDay,
   activeScenarioTotalDays,
   onTabChange,
   onToggleSound,
   onSetSpeed,
-  onQuickSpawn,
+  onQuickSpawn: _onQuickSpawn,
+  onSpawn5Pt: _onSpawn5Pt,
   onLaunchFerry,
   onToggleContinuousFlow,
   onOpenRetrospective,
@@ -202,6 +211,39 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             ~{forecast.predictedStories}
           </span>
         </button>
+
+        {/* Sprint Planning Button */}
+        {onOpenSprintPlanning && (
+          <button
+            onClick={onOpenSprintPlanning}
+            className={`px-3 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none ${
+              dayTimeFormatted.includes('Planning')
+                ? 'bg-[#FFD200] text-[#1E222A] ring-2 ring-[#48A2D8] animate-pulse'
+                : 'bg-[#1E222A] hover:bg-[#2B2F38] text-slate-200 border-[#384050]'
+            }`}
+            style={{ fontFamily: 'var(--font-heading)' }}
+            title="Open Sprint Planning phase to curate the Backlog and commit to the Parking Lot"
+          >
+            <ClipboardList className="w-4 h-4 text-[#FFD200]" />
+            <span>Sprint Plan</span>
+          </button>
+        )}
+
+        {/* Harbor Works & Upgrades Menu Icon Button */}
+        {onOpenUpgrades && (
+          <button
+            onClick={onOpenUpgrades}
+            className="px-3 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none group relative"
+            style={{ fontFamily: 'var(--font-heading)' }}
+            title="Open Harbor Works & Upgrades: Upgrade toll booths, efficiency, automation, and ferry vessel"
+          >
+            <Wrench className="w-4 h-4 text-[#1E222A] group-hover:rotate-45 transition-transform" />
+            <span>Upgrades</span>
+            {hasAffordableUpgrades && (
+              <span className="w-2.5 h-2.5 rounded-full bg-[#E85D04] ring-2 ring-[#1E222A] animate-pulse" />
+            )}
+          </button>
+        )}
 
         {/* Predetermined Tech Scenarios Button */}
         {onOpenScenarios && (
@@ -340,18 +382,8 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           {settings.soundEnabled ? <Volume2 className="w-4 h-4 text-[#FFD200]" /> : <VolumeX className="w-4 h-4 text-slate-500" />}
         </button>
 
-        {/* Quick Launch / Spawn Actions with Chunky Toy Styling */}
+        {/* Deploy Release Action */}
         <div className="flex items-center gap-2">
-          <button
-            onClick={onQuickSpawn}
-            className="hidden xl:flex items-center gap-2 px-4 py-2 text-xs font-black text-[#1E222A] bg-[#FFD200] hover:bg-[#FFE043] border-[2.5px] border-[#1E222A] rounded-2xl shadow-[0_4px_0_#1E222A] active:translate-y-1 active:shadow-[0_1px_0_#1E222A] transition-all whitespace-nowrap cursor-pointer"
-            style={{ fontFamily: 'var(--font-heading)' }}
-            title="Pull a new user story from the backlog onto highway"
-          >
-            <PlusCircle className="w-4 h-4 text-[#1E222A]" />
-            Pull Story
-          </button>
-
           <button
             onClick={onLaunchFerry}
             disabled={!ferryReady}

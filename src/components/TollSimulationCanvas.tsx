@@ -19,7 +19,9 @@ import {
   Ship,
   ShieldAlert,
   Flame,
-  Info
+  Info,
+  Wrench,
+  ClipboardList
 } from 'lucide-react';
 import { FlowEfficiencyViolationModal } from './FlowEfficiencyViolationModal';
 
@@ -32,7 +34,7 @@ interface TollSimulationCanvasProps {
   onSelectBooth: (boothId: number) => void;
   onSliceStory: (vehicleId: string) => void;
   onUnlockBooth: (boothId: number) => void;
-  onSpawnStory: (points?: StoryPoint) => void;
+  onSpawnStory?: (points?: StoryPoint) => void;
   onLaunchFerry: () => void;
   onUpgradeEfficiency?: (boothId: number) => void;
   onUpgradeAutomation?: (boothId: number) => void;
@@ -40,6 +42,11 @@ interface TollSimulationCanvasProps {
   continuousFlowMode?: boolean;
   onToggleContinuousFlow?: () => void;
   funds: number;
+  onResolveIncident?: (boothId: number, emergency?: boolean) => void;
+  onDispatchFromParkingLot?: () => void;
+  onOpenSprintPlanning?: () => void;
+  onOpenUpgrades?: () => void;
+  onStageStoryInParkingLot?: (points?: StoryPoint) => void;
 }
 
 const LANE_Y_POSITIONS = [50, 125, 200, 275, 350, 425];
@@ -61,7 +68,12 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   onSetLaneWipLimit,
   continuousFlowMode = true,
   onToggleContinuousFlow,
-  funds
+  funds,
+  onResolveIncident,
+  onDispatchFromParkingLot,
+  onOpenSprintPlanning,
+  onOpenUpgrades,
+  onStageStoryInParkingLot
 }) => {
   const [hoveredVehicle, setHoveredVehicle] = useState<VehicleStory | null>(null);
   const [selectedViolationBooth, setSelectedViolationBooth] = useState<TollBooth | null>(null);
@@ -80,6 +92,11 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   const dayProgressPercent = Math.min(100, Math.max(0, (1 - ferry.sprintTimer / ferry.sprintDuration) * 100));
   const isFull = ferry.currentPoints >= ferry.capacity;
   const isUrgent = (ferry.sprintTimer <= 10 || isFull) && ferry.state === 'boarding';
+
+  // Identify staged vehicles in the Parking Lot and active incidents
+  const stagedVehicles = React.useMemo(() => vehicles.filter((v) => v.state === 'staged'), [vehicles]);
+  const stagedPoints = React.useMemo(() => stagedVehicles.reduce((sum, v) => sum + v.points, 0), [stagedVehicles]);
+  const activeIncidents = React.useMemo(() => booths.filter((b) => b.unlocked && b.incident !== null), [booths]);
 
   // Identify significant bottleneck booth
   const primaryBottleneck = React.useMemo<{ booth: TollBooth; queue: VehicleStory[]; points: number } | null>(() => {
@@ -127,6 +144,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               DAY #{ferry.dayNumber}
             </span>
             <span className="font-mono text-xs font-black text-white flex items-center gap-1.5">
+              {ferry.dayPhase === 'planning' && <Clock className="w-4 h-4 text-[#FFD200]" />}
               {ferry.dayPhase === 'morning' && <Sun className="w-4 h-4 text-[#FFD200]" />}
               {ferry.dayPhase === 'midday' && <Sun className="w-4 h-4 text-yellow-300" />}
               {ferry.dayPhase === 'afternoon' && <Sun className="w-4 h-4 text-[#E85D04]" />}
@@ -205,6 +223,55 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
         </div>
       </div>
 
+      {/* Active Incidents Alert Banner */}
+      {activeIncidents.length > 0 && (
+        <div className="bg-[#E85D04] border-b-[2.5px] border-[#1E222A] px-4 py-2 flex items-center justify-between text-xs text-white z-10 shrink-0 shadow-lg animate-pulse">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1 rounded-lg bg-[#1E222A] text-[#FFD200] border border-black/30 shrink-0">
+              <AlertTriangle className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <strong className="text-[#FFD200]">ROADWAY OBSTRUCTION:</strong>{' '}
+              {activeIncidents.map((b) => `${b.name.split('·')[0]} (${b.incident?.title}, ${Math.ceil(b.incident?.remaining || 0)}s)`).join(' · ')}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            {activeIncidents.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => onResolveIncident && onResolveIncident(b.id, true)}
+                className="px-2.5 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs border border-[#1E222A] shadow cursor-pointer transition-all active:translate-y-0.5"
+              >
+                Clear {b.name.split('·')[0]} (${b.incident?.quickFixCost})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Sprint Planning Phase Callout */}
+      {ferry.dayPhase === 'planning' && (
+        <div className="bg-[#1E222A] border-b-[2.5px] border-[#384050] px-4 py-2 flex items-center justify-between text-xs text-[#F4F6F9] z-10 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <span className="px-2 py-0.5 rounded-md bg-[#FFD200] text-[#1E222A] font-black text-[10px] uppercase font-mono">
+              Planning Phase
+            </span>
+            <span>
+              Roadway will open once sprint commitments are finalized. Staged in parking lot: <strong>{stagedVehicles.length} stories ({stagedPoints} pts)</strong>.
+            </span>
+          </div>
+          {onOpenSprintPlanning && (
+            <button
+              onClick={onOpenSprintPlanning}
+              className="px-3 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs flex items-center gap-1.5 border border-[#1E222A] shadow cursor-pointer transition-all"
+            >
+              <span>📋 Open Sprint Planning</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Significant Bottleneck Alert Callout Banner */}
       {primaryBottleneck && (
         <div className="bg-[#D92525] border-b-[2.5px] border-[#1E222A] px-4 py-2 flex items-center justify-between text-xs text-white z-10 shrink-0 shadow-lg">
@@ -237,7 +304,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
       {/* Simulation World SVG Canvas */}
       <div className="relative flex-1 w-full h-full overflow-hidden">
         <svg
-          viewBox="0 0 1100 500"
+          viewBox="-420 0 1520 500"
           className="w-full h-full preserve-3d"
           preserveAspectRatio="xMidYMid meet"
         >
@@ -288,8 +355,8 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
           </defs>
 
           {/* 1. BACKGROUND LAYERS */}
-          {/* Highway & Toll Plaza Surface */}
-          <rect x="0" y="20" width="600" height="470" fill="url(#roadGrad)" />
+          {/* Extended Highway & Toll Plaza Surface */}
+          <rect x="-420" y="20" width="1020" height="470" fill="url(#roadGrad)" />
 
           {/* Ocean Water Zone */}
           <rect x="600" y="20" width="500" height="470" fill="url(#waterGrad)" opacity="0.9" />
@@ -335,31 +402,190 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             <circle key={by} cx="615" cy={by} r="5" fill="#78716c" stroke="#292524" strokeWidth="2" />
           ))}
 
-          {/* 2. HIGHWAY LANES & TOLL ISLANDS */}
-          {/* Curbs / Verges framing the Single Feeder Entrance (x=0 to 45) and fanning out (45 to 195) */}
-          <path
-            d="M 0 20 L 45 20 L 45 202 C 100 202, 135 20, 195 20 Z"
-            fill="#0b1324"
-            stroke="#334155"
-            strokeWidth="1.5"
-          />
-          <path
-            d="M 0 490 L 45 490 L 45 273 C 100 273, 135 490, 195 490 Z"
-            fill="#0b1324"
-            stroke="#334155"
-            strokeWidth="1.5"
-          />
+          {/* 2. HIGHWAY LANES, DUAL-SIDE SPRINT PARKING LOT & TOLL ISLANDS */}
+          {/* NORTH STAGING BAY (Top side of street, y = 22..192) */}
+          <g>
+            {/* Asphalt Foundation for North Bay */}
+            <rect
+              x="-412"
+              y="22"
+              width="194"
+              height="170"
+              rx="8"
+              fill="#181c24"
+              stroke="#384050"
+              strokeWidth="2"
+            />
+            {/* Overhead Signboard */}
+            <rect x="-406" y="26" width="182" height="20" rx="4" fill="#0f172a" stroke="#f59e0b" strokeWidth="1" />
+            <text
+              x="-328"
+              y="39"
+              fill="#fef08a"
+              fontSize="7"
+              fontWeight="black"
+              textAnchor="middle"
+              fontFamily="var(--font-mono)"
+              letterSpacing="0.5"
+            >
+              🅿️ NORTH STAGING BAY
+            </text>
 
-          {/* Single Intake Highway Trunk Lane (x=0 to 45, y=202..273, center 237.5) */}
-          <line x1="0" y1="202" x2="45" y2="202" stroke="#e2e8f0" strokeWidth="2.5" />
-          <line x1="0" y1="273" x2="45" y2="273" stroke="#e2e8f0" strokeWidth="2.5" />
-          <line x1="0" y1="237.5" x2="45" y2="237.5" stroke="#eab308" strokeWidth="2" strokeDasharray="8 6" />
+            {/* 6 Marked Parking Stalls for North Bay (3 cols x 2 rows, N1..N6) */}
+            {[0, 1, 2, 3, 4, 5].map((idx) => {
+              const col = idx % 3;
+              const row = Math.floor(idx / 3);
+              const stallX = -402 + col * 58;
+              const stallY = 54 + row * 46;
+              return (
+                <g key={'stall-north-' + idx}>
+                  <rect
+                    x={stallX}
+                    y={stallY}
+                    width="48"
+                    height="36"
+                    rx="4"
+                    fill="#11141a"
+                    stroke="#334155"
+                    strokeWidth="1"
+                    strokeDasharray="3 2"
+                  />
+                  <text
+                    x={stallX + 5}
+                    y={stallY + 11}
+                    fill="#f59e0b"
+                    fontSize="6.5"
+                    fontFamily="var(--font-mono)"
+                    fontWeight="bold"
+                  >
+                    N{idx + 1}
+                  </text>
+                </g>
+              );
+            })}
 
-          {/* Single Feeder Overhead Road Sign / Marker */}
-          <g transform="translate(6, 172)">
-            <rect width="78" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
-            <text x="39" y="14" fill="#ffffff" fontSize="7.5" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
-              SINGLE INTAKE
+            {/* Tarmac connector slipway from North lot down into the central street */}
+            <path
+              d="M -218 135 C -170 135, -170 202, -120 202 L 45 202 L 45 273 L -412 273 L -412 202 L -218 202 Z"
+              fill="#0b1324"
+              stroke="#334155"
+              strokeWidth="1.5"
+            />
+
+            {/* North merge feeder dashed curve guide */}
+            <path
+              d="M -218 135 C -170 160, -165 237.5, -120 237.5"
+              fill="none"
+              stroke="#eab308"
+              strokeWidth="2"
+              strokeDasharray="5 4"
+              opacity="0.9"
+            />
+          </g>
+
+          {/* SOUTH STAGING BAY (Bottom side of street, y = 278..448) */}
+          <g>
+            {/* Asphalt Foundation for South Bay */}
+            <rect
+              x="-412"
+              y="278"
+              width="194"
+              height="170"
+              rx="8"
+              fill="#181c24"
+              stroke="#384050"
+              strokeWidth="2"
+            />
+            {/* Overhead Signboard */}
+            <rect x="-406" y="424" width="182" height="20" rx="4" fill="#0f172a" stroke="#38bdf8" strokeWidth="1" />
+            <text
+              x="-328"
+              y="437"
+              fill="#bae6fd"
+              fontSize="7"
+              fontWeight="black"
+              textAnchor="middle"
+              fontFamily="var(--font-mono)"
+              letterSpacing="0.5"
+            >
+              🅿️ SOUTH STAGING BAY
+            </text>
+
+            {/* 6 Marked Parking Stalls for South Bay (3 cols x 2 rows, S1..S6) */}
+            {[0, 1, 2, 3, 4, 5].map((idx) => {
+              const col = idx % 3;
+              const row = Math.floor(idx / 3);
+              const stallX = -402 + col * 58;
+              const stallY = 292 + row * 46;
+              return (
+                <g key={'stall-south-' + idx}>
+                  <rect
+                    x={stallX}
+                    y={stallY}
+                    width="48"
+                    height="36"
+                    rx="4"
+                    fill="#11141a"
+                    stroke="#334155"
+                    strokeWidth="1"
+                    strokeDasharray="3 2"
+                  />
+                  <text
+                    x={stallX + 5}
+                    y={stallY + 11}
+                    fill="#38bdf8"
+                    fontSize="6.5"
+                    fontFamily="var(--font-mono)"
+                    fontWeight="bold"
+                  >
+                    S{idx + 1}
+                  </text>
+                </g>
+              );
+            })}
+
+            {/* Tarmac connector slipway from South lot up into the central street */}
+            <path
+              d="M -218 375 C -170 375, -170 273, -120 273 L 45 273 L 45 202 L -412 202 L -412 273 L -218 273 Z"
+              fill="#0b1324"
+              stroke="#334155"
+              strokeWidth="1.5"
+            />
+
+            {/* South merge feeder dashed curve guide */}
+            <path
+              d="M -218 375 C -170 350, -165 237.5, -120 237.5"
+              fill="none"
+              stroke="#38bdf8"
+              strokeWidth="2"
+              strokeDasharray="5 4"
+              opacity="0.9"
+            />
+          </g>
+
+          {/* CENTRAL STREET (Between North & South Bays, y = 202..273, center 237.5) */}
+          <line x1="-412" y1="202" x2="45" y2="202" stroke="#e2e8f0" strokeWidth="2.5" />
+          <line x1="-412" y1="273" x2="45" y2="273" stroke="#e2e8f0" strokeWidth="2.5" />
+          <line x1="-412" y1="237.5" x2="45" y2="237.5" stroke="#eab308" strokeWidth="2" strokeDasharray="8 6" />
+
+          {/* Animated Directional Road Flow Arrows pointing east from both bays towards the tolls */}
+          <g opacity="0.85">
+            <path d="M -190 234 L -184 237.5 L -190 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M -150 234 L -144 237.5 L -150 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M -110 234 L -104 237.5 L -110 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M -70 234 L -64 237.5 L -70 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M -30 234 L -24 237.5 L -30 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M 10 234 L 16 237.5 L 10 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+          </g>
+          <text x="-95" y="226" fill="#eab308" fontSize="8" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.2">
+            DUAL-BAY STAGING · FLOW OVER TO TOLL PLAZA →
+          </text>
+
+          {/* Feeder Overhead Road Sign / Marker */}
+          <g transform="translate(-160, 168)">
+            <rect width="96" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
+            <text x="48" y="14" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
+              HIGHWAY INTAKE · ARTERIAL
             </text>
           </g>
 
@@ -473,8 +699,74 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                 {/* Unlocked Lane Elements */}
                 {isUnlocked && (
                   <g>
+                    {/* Active Incident Blockage Overlay */}
+                    {booth.incident && (
+                      <g>
+                        <rect
+                          x="180"
+                          y={laneY}
+                          width="120"
+                          height={LANE_HEIGHT}
+                          fill="url(#hazardStripes)"
+                          stroke="#ef4444"
+                          strokeWidth="1.5"
+                        />
+                        {/* Interactive Clickable Incident Resolution Card */}
+                        <g
+                          className="cursor-pointer group"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onResolveIncident && onResolveIncident(booth.id, true);
+                          }}
+                        >
+                          <rect
+                            x="45"
+                            y={laneY + 12}
+                            width="245"
+                            height="26"
+                            rx="6"
+                            fill="#450a0a"
+                            stroke="#ef4444"
+                            strokeWidth="1.5"
+                            filter="url(#glow)"
+                          />
+                          <text
+                            x="54"
+                            y={laneY + 28}
+                            fill="#fecdd3"
+                            fontSize="8"
+                            fontWeight="bold"
+                            fontFamily="var(--font-mono)"
+                          >
+                            ⚠️ {booth.incident.title.toUpperCase()} ({Math.ceil(booth.incident.remaining)}s)
+                          </text>
+                          <rect
+                            x="215"
+                            y={laneY + 15}
+                            width="70"
+                            height="20"
+                            rx="4"
+                            fill="#ef4444"
+                            stroke="#ffffff"
+                            strokeWidth="0.8"
+                            className="group-hover:fill-red-600 transition-colors"
+                          />
+                          <text
+                            x="250"
+                            y={laneY + 28}
+                            fill="#ffffff"
+                            fontSize="7.5"
+                            fontWeight="black"
+                            textAnchor="middle"
+                          >
+                            🔧 FIX (${booth.incident.quickFixCost})
+                          </text>
+                        </g>
+                      </g>
+                    )}
+
                     {/* Severe Bottleneck Flashing Road Hazard Overlay */}
-                    {isSevereBottleneck && (
+                    {isSevereBottleneck && !booth.incident && (
                       <g className="animate-pulse">
                         <rect
                           x="35"
@@ -601,8 +893,26 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         opacity="0.35"
                       />
 
-                      {/* Beacon Light - Flashing Strobe when Bottlenecked */}
-                      {isSevereBottleneck ? (
+                      {/* Beacon Light - Flashing Strobe when Incident or Bottlenecked */}
+                      {booth.incident ? (
+                        <g>
+                          <circle
+                            cx="318"
+                            cy={laneY + 4}
+                            r="8"
+                            fill="#f59e0b"
+                            opacity="0.8"
+                            className="animate-ping"
+                          />
+                          <circle
+                            cx="318"
+                            cy={laneY + 4}
+                            r="4.5"
+                            fill="#f59e0b"
+                            filter="url(#glow)"
+                          />
+                        </g>
+                      ) : isSevereBottleneck ? (
                         <g>
                           <circle
                             cx="318"
@@ -625,9 +935,36 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                           cx="318"
                           cy={laneY + 4}
                           r="4"
-                          fill={booth.isProcessing ? '#38bdf8' : '#10b981'}
+                          fill={booth.isProcessing ? '#38bdf8' : booth.cooldownTimer > 0 ? '#f59e0b' : '#10b981'}
                           filter="url(#glow)"
                         />
+                      )}
+
+                      {/* Turnaround Cooldown Badge between vehicles */}
+                      {booth.cooldownTimer > 0 && (
+                        <g>
+                          <rect
+                            x="235"
+                            y={laneY - 4}
+                            width="70"
+                            height="13"
+                            rx="3"
+                            fill="#78350f"
+                            stroke="#f59e0b"
+                            strokeWidth="1"
+                          />
+                          <text
+                            x="270"
+                            y={laneY + 5}
+                            fill="#fef08a"
+                            fontSize="7"
+                            fontWeight="bold"
+                            textAnchor="middle"
+                            fontFamily="var(--font-mono)"
+                          >
+                            ⏱️ COOLDOWN: {booth.cooldownTimer.toFixed(1)}s
+                          </text>
+                        </g>
                       )}
 
                       {/* Electronic Overhead Signboard */}
@@ -866,18 +1203,28 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             )}
           </g>
 
-          {/* 5. MOVING STORY POINT VEHICLES */}
+          {/* 5. MOVING STORY POINT VEHICLES & STAGED PARKING LOT CARS */}
           {vehicles.map((v) => {
             const targetLaneIndex = v.laneIndex >= 0 && v.laneIndex < LANE_Y_POSITIONS.length ? v.laneIndex : 2;
             const laneY = LANE_Y_POSITIONS[targetLaneIndex];
             const targetCarY = laneY + (LANE_HEIGHT - v.width) / 2;
             const FEEDER_CAR_Y = 237.5 - v.width / 2;
 
-            // Calculate actual visual Y from simulated v.y or smooth trajectory
+            // Calculate actual visual coordinates
+            let carX = v.x;
             let carY = targetCarY;
             let angle = 0;
 
-            if (v.y !== undefined && !isNaN(v.y)) {
+            if (v.state === 'staged') {
+              const slot = v.parkingSlotIndex ?? 0;
+              const isNorth = slot % 2 === 0;
+              const bayIndex = Math.floor(slot / 2);
+              const col = bayIndex % 3;
+              const row = Math.floor(bayIndex / 3);
+              carX = -402 + col * 58 + (48 - v.length) / 2;
+              carY = (isNorth ? 54 + row * 46 : 292 + row * 46) + (36 - v.width) / 2;
+              angle = 0;
+            } else if (v.y !== undefined && !isNaN(v.y)) {
               carY = v.y;
             } else if (v.x < 40) {
               carY = FEEDER_CAR_Y;
@@ -888,7 +1235,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             }
 
             // Calculate subtle steering bank angle while fanning out into assigned lane
-            if (v.x >= 40 && v.x <= 185) {
+            if (v.state !== 'staged' && v.x >= 40 && v.x <= 185) {
               const t = (v.x - 40) / 145;
               const derivative = 6 * t * (1 - t);
               const dy = targetCarY - FEEDER_CAR_Y;
@@ -902,7 +1249,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             return (
               <g
                 key={v.id}
-                transform={`translate(${v.x}, ${carY}) rotate(${angle}, ${v.length / 2}, ${v.width / 2})`}
+                transform={`translate(${carX}, ${carY}) rotate(${angle}, ${v.length / 2}, ${v.width / 2})`}
                 className="cursor-pointer"
                 filter="url(#carShadow)"
                 onClick={(e) => {
@@ -1032,39 +1379,35 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
       {/* Interactive Bottom Control Ribbon on Canvas */}
       <div className="px-5 py-3 bg-[#1E222A] border-t-[3px] border-[#1E222A] flex flex-wrap items-center justify-between gap-3 text-xs">
-        {/* Spawn Controls: Test Little's Law and Batch Sizing with Chunky Toy Buttons */}
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-slate-300 text-[11px] font-black uppercase tracking-wider hidden sm:inline" style={{ fontFamily: 'var(--font-heading)' }}>
-            Inject Backlog:
-          </span>
-          <button
-            onClick={() => onSpawnStory(1)}
-            className="px-3 py-1.5 bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] border-2 border-[#1E222A] rounded-xl transition-all flex items-center gap-1 font-mono font-black shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
-            title="Inject 1-point hotfix bug (nimble)"
-          >
-            +1 pt Bug
-          </button>
-          <button
-            onClick={() => onSpawnStory(3)}
-            className="px-3 py-1.5 bg-[#48A2D8] hover:bg-[#5CB5EB] text-white border-2 border-[#1E222A] rounded-xl transition-all flex items-center gap-1 font-mono font-black shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
-            title="Inject standard 3-point feature story"
-          >
-            +3 pt Story
-          </button>
-          <button
-            onClick={() => onSpawnStory(8)}
-            className="px-3 py-1.5 bg-[#E85D04] hover:bg-[#F47019] text-white border-2 border-[#1E222A] rounded-xl transition-all flex items-center gap-1 font-mono font-black shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
-            title="Inject 8-point epic (heavy truck)"
-          >
-            +8 pt Epic
-          </button>
-          <button
-            onClick={() => onSpawnStory(21)}
-            className="px-3 py-1.5 bg-[#D92525] hover:bg-[#E83C3C] text-white border-2 border-[#1E222A] rounded-xl transition-all flex items-center gap-1 font-mono font-black shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
-            title="Inject 21-point monolithic redesign (watch lanes bottleneck!)"
-          >
-            +21 pt Monolith 🐢
-          </button>
+        {/* Left Side: Sprint Planning & Staged Backlog Actions */}
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {/* Staged Parking Lot Counter & Sprint Planning */}
+          {stagedVehicles.length > 0 && (
+            <span className="px-3 py-1.5 rounded-xl bg-[#FFD200]/20 border border-[#FFD200]/40 text-[#FFD200] font-mono font-black text-xs">
+              🅿️ LOT: {stagedVehicles.length} ({stagedPoints} pts)
+            </span>
+          )}
+
+          {onOpenSprintPlanning && (
+            <button
+              onClick={onOpenSprintPlanning}
+              className="px-3.5 py-1.5 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] border-2 border-[#1E222A] transition-all flex items-center gap-1.5 font-mono font-black text-xs cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
+              title="Open Sprint Planning to stage backlog items into the Parking Lot"
+            >
+              <ClipboardList className="w-4 h-4 text-[#1E222A]" />
+              <span>📋 Plan Sprint</span>
+            </button>
+          )}
+
+          {stagedVehicles.length > 0 && onDispatchFromParkingLot && (
+            <button
+              onClick={onDispatchFromParkingLot}
+              className="px-3 py-1.5 bg-[#10B981] hover:bg-[#059669] text-white border-2 border-[#1E222A] rounded-xl transition-all flex items-center gap-1 font-mono font-black text-xs shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
+              title="Release next staged vehicle from the parking lot onto the toll feeder road"
+            >
+              <span>⚡ Release Next</span>
+            </button>
+          )}
 
           {onToggleContinuousFlow && (
             <button

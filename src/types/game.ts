@@ -21,8 +21,33 @@ export interface VehicleStory {
   targetX: number;
   targetY: number;
   laneIndex: number; // -1 if on main highway before assignment
-  state: 'approaching' | 'queued' | 'processing' | 'to_dock' | 'on_ferry' | 'departed';
+  state: 'staged' | 'approaching' | 'queued' | 'processing' | 'to_dock' | 'on_ferry' | 'departed';
   laneQueuePosition: number; // 0 = at the booth, 1 = right behind, etc.
+  parkingSlotIndex?: number; // 0, 1, 2... slot index in the sprint parking lot
+}
+
+export type BacklogPriority = 'critical' | 'high' | 'medium' | 'low';
+
+export interface BacklogItem {
+  id: string;
+  title: string;
+  points: StoryPoint;
+  type: 'bug' | 'task' | 'story' | 'feature' | 'epic' | 'initiative' | 'monolith';
+  businessValue: number; // base toll value
+  priority: BacklogPriority;
+  category: 'Security' | 'Payment Gateway' | 'Infrastructure' | 'Core API' | 'Frontend UX' | 'Data Analytics' | 'Compliance';
+  description?: string;
+  selected: boolean;
+  isCarryover?: boolean;
+}
+
+export interface SprintPlan {
+  dayNumber: number;
+  targetCapacity: number;
+  committedPoints: number;
+  committedCount: number;
+  items: BacklogItem[];
+  agileAdvice: string;
 }
 
 export type LaneSpecialization = 'all' | 'small_only' | 'standard' | 'heavy_only';
@@ -75,7 +100,7 @@ export interface TollBooth {
   totalRevenueGenerated: number;
 }
 
-export type DayPhase = 'morning' | 'midday' | 'afternoon' | 'sunset' | 'departure';
+export type DayPhase = 'planning' | 'morning' | 'midday' | 'afternoon' | 'sunset' | 'departure';
 
 export interface FerryDock {
   capacity: number; // max story points capacity

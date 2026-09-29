@@ -10,7 +10,8 @@ import {
   ArrowUpRight,
   Clock,
   CheckCircle2,
-  Receipt
+  Receipt,
+  X
 } from 'lucide-react';
 
 interface UpgradePanelProps {
@@ -41,6 +42,9 @@ interface UpgradePanelProps {
   onSetDailyDuration?: (seconds: number) => void;
   continuousFlowMode?: boolean;
   onToggleContinuousFlow?: () => void;
+  onResolveIncident?: (id: number, emergency?: boolean) => void;
+  isOpen?: boolean;
+  onClose?: () => void;
 }
 
 export const UpgradePanel: React.FC<UpgradePanelProps> = ({
@@ -63,12 +67,30 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
   onToggleAutoDepart,
   onSetDailyDuration,
   continuousFlowMode = true,
-  onToggleContinuousFlow
+  onToggleContinuousFlow,
+  onResolveIncident,
+  isOpen,
+  onClose
 }) => {
   const [activeTab, setActiveTab] = useState<'booths' | 'ferry'>('booths');
 
+  if (isOpen !== undefined && !isOpen) {
+    return null;
+  }
+
   // Currently focused booth
   const focusedBooth = booths.find((b) => b.id === (selectedBoothId ?? 0)) || booths[0];
+
+  React.useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && onClose) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Upgrade costs
   const efficiencyCost = Math.round(75 * Math.pow(1.5, focusedBooth.efficiencyLevel));
@@ -79,8 +101,8 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
   const ferrySpeedCost = Math.round(150 * Math.pow(1.7, ferry.speedLevel));
   const ferryAmenitiesCost = Math.round(200 * Math.pow(1.8, ferry.amenitiesLevel));
 
-  return (
-    <div className="bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl p-6 sm:p-8 text-[#1E222A] space-y-6 shadow-[0_8px_0_#1E222A] relative">
+  const panelContent = (
+    <div className="bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl p-6 sm:p-8 text-[#1E222A] space-y-6 shadow-[0_8px_0_#1E222A] relative w-full">
       {/* Decorative Corner Rivets */}
       <div className="rivet top-3 left-3" />
       <div className="rivet top-3 right-3" />
@@ -102,32 +124,44 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
           </p>
         </div>
 
-        {/* Tab Selection */}
-        <div className="flex items-center gap-1.5 p-1.5 bg-[#1E222A] rounded-2xl border-2 border-[#1E222A] self-start shadow-inner">
-          <button
-            onClick={() => setActiveTab('booths')}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'booths'
-                ? 'bg-[#FFD200] text-[#1E222A] border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A]'
-                : 'text-slate-300 hover:text-white'
-            }`}
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            <Sliders className="w-4 h-4 text-[#E85D04]" />
-            Toll Booths &amp; Squads
-          </button>
-          <button
-            onClick={() => setActiveTab('ferry')}
-            className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
-              activeTab === 'ferry'
-                ? 'bg-[#48A2D8] text-white border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A]'
-                : 'text-slate-300 hover:text-white'
-            }`}
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            <Ship className="w-4 h-4 text-[#48A2D8]" />
-            Ferry &amp; Cadence
-          </button>
+        <div className="flex items-center gap-3 self-start sm:self-auto">
+          {/* Tab Selection */}
+          <div className="flex items-center gap-1.5 p-1.5 bg-[#1E222A] rounded-2xl border-2 border-[#1E222A] shadow-inner">
+            <button
+              onClick={() => setActiveTab('booths')}
+              className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'booths'
+                  ? 'bg-[#FFD200] text-[#1E222A] border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A]'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              <Sliders className="w-4 h-4 text-[#E85D04]" />
+              Toll Booths &amp; Squads
+            </button>
+            <button
+              onClick={() => setActiveTab('ferry')}
+              className={`px-4 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-2 cursor-pointer ${
+                activeTab === 'ferry'
+                  ? 'bg-[#48A2D8] text-white border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A]'
+                  : 'text-slate-300 hover:text-white'
+              }`}
+              style={{ fontFamily: 'var(--font-heading)' }}
+            >
+              <Ship className="w-4 h-4 text-[#48A2D8]" />
+              Ferry &amp; Cadence
+            </button>
+          </div>
+
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-2.5 rounded-2xl bg-[#1E222A] hover:bg-[#2B2F38] text-white border-2 border-[#1E222A] transition-colors cursor-pointer shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
+              title="Close Upgrades (Esc)"
+            >
+              <X className="w-5 h-5 text-[#FFD200]" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -244,6 +278,38 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
                       />
                     </div>
                   </div>
+                </div>
+
+                {/* Cooldown & Incident Alert Status Banner */}
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 bg-slate-100 rounded-xl border border-slate-300 text-xs">
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[#E85D04]" />
+                    <span className="font-bold text-[#1E222A]">
+                      Turnaround Cooldown:
+                    </span>
+                    <span className="font-mono font-black text-[#1E222A] bg-[#FFD200] px-2 py-0.5 rounded-lg border border-[#1E222A]">
+                      {focusedBooth.cooldownDuration.toFixed(1)}s
+                    </span>
+                    <span className="text-[11px] text-slate-500 font-medium hidden sm:inline">
+                      (Reduces with level: Lvl 1 = 3.5s → Lvl 8+ = 0.1s)
+                    </span>
+                  </div>
+
+                  {focusedBooth.incident && (
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-rose-600 animate-pulse">
+                        ⚠️ {focusedBooth.incident.title} ({Math.ceil(focusedBooth.incident.remaining)}s)
+                      </span>
+                      {onResolveIncident && (
+                        <button
+                          onClick={() => onResolveIncident(focusedBooth.id, true)}
+                          className="px-2.5 py-1 bg-red-600 hover:bg-red-700 text-white font-black rounded-lg text-xs cursor-pointer shadow-sm"
+                        >
+                          Clear (${focusedBooth.incident.quickFixCost})
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* 3 Core Upgrades */}
@@ -656,4 +722,21 @@ export const UpgradePanel: React.FC<UpgradePanelProps> = ({
       )}
     </div>
   );
+
+  if (isOpen !== undefined) {
+    return (
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/75 backdrop-blur-sm overflow-y-auto animate-in fade-in duration-200"
+        onClick={(e) => {
+          if (e.target === e.currentTarget && onClose) onClose();
+        }}
+      >
+        <div className="relative w-full max-w-5xl my-8 max-h-[90vh] overflow-y-auto rounded-3xl">
+          {panelContent}
+        </div>
+      </div>
+    );
+  }
+
+  return panelContent;
 };

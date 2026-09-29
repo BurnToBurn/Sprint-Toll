@@ -4,7 +4,10 @@ import {
   GraduationCap,
   AlertTriangle,
   CheckCircle2,
-  Sliders
+  Sliders,
+  Lightbulb,
+  Zap,
+  HelpCircle
 } from 'lucide-react';
 import { sound } from '../utils/audio';
 

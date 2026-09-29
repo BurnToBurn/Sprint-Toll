@@ -21,7 +21,8 @@ import {
   Sliders,
   ChevronRight,
   ShieldAlert,
-  Info
+  Info,
+  ClipboardList
 } from 'lucide-react';
 import { FlowEfficiencyViolationModal } from './FlowEfficiencyViolationModal';
 
@@ -35,10 +36,11 @@ interface KanbanBoardTabProps {
   onSliceStory: (vehicleId: string) => void;
   onSetLaneWipLimit: (boothId: number, limit: number) => void;
   onLaunchFerry: () => void;
-  onSpawnStory: (points?: StoryPoint) => void;
+  onSpawnStory?: (points?: StoryPoint) => void;
   onSelectBooth: (boothId: number) => void;
   onUpgradeEfficiency?: (boothId: number) => void;
   onUpgradeAutomation?: (boothId: number) => void;
+  onOpenSprintPlanning?: () => void;
 }
 
 export const KanbanBoardTab: React.FC<KanbanBoardTabProps> = ({
@@ -51,10 +53,11 @@ export const KanbanBoardTab: React.FC<KanbanBoardTabProps> = ({
   onSliceStory,
   onSetLaneWipLimit,
   onLaunchFerry,
-  onSpawnStory,
+  onSpawnStory: _onSpawnStory,
   onSelectBooth,
   onUpgradeEfficiency,
-  onUpgradeAutomation
+  onUpgradeAutomation,
+  onOpenSprintPlanning
 }) => {
   const [sizeFilter, setSizeFilter] = useState<'all' | 'small' | 'medium' | 'large'>('all');
   const [selectedLaneFilter, setSelectedLaneFilter] = useState<number | 'all'>('all');
@@ -72,7 +75,7 @@ export const KanbanBoardTab: React.FC<KanbanBoardTabProps> = ({
     const done: VehicleStory[] = [...ferry.vehiclesOnBoard];
 
     vehicles.forEach((v) => {
-      if (v.state === 'approaching') {
+      if (v.state === 'approaching' || v.state === 'staged') {
         todo.push(v);
       } else if (v.state === 'queued' || v.state === 'processing' || v.state === 'to_dock') {
         inProgress.push(v);
@@ -120,7 +123,7 @@ export const KanbanBoardTab: React.FC<KanbanBoardTabProps> = ({
     Object.keys(map).forEach((k) => {
       const laneId = Number(k);
       map[laneId].sort((a, b) => {
-        const order = { processing: 0, queued: 1, to_dock: 2, approaching: 3, on_ferry: 4, departed: 5 };
+        const order: Record<string, number> = { processing: 0, queued: 1, to_dock: 2, approaching: 3, staged: 4, on_ferry: 5, departed: 6 };
         const stateDiff = (order[a.state] ?? 99) - (order[b.state] ?? 99);
         if (stateDiff !== 0) return stateDiff;
         return a.laneQueuePosition - b.laneQueuePosition;
@@ -196,14 +199,17 @@ export const KanbanBoardTab: React.FC<KanbanBoardTabProps> = ({
               ))}
             </div>
 
-            <button
-              onClick={() => onSpawnStory()}
-              className="px-4 py-2 rounded-2xl bg-[#48A2D8] hover:bg-[#5CB5EB] text-white font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
-              style={{ fontFamily: 'var(--font-heading)' }}
-            >
-              <Plus className="w-4 h-4" />
-              <span>Pull Story</span>
-            </button>
+            {onOpenSprintPlanning && (
+              <button
+                onClick={onOpenSprintPlanning}
+                className="px-3.5 py-2 rounded-2xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs transition-all flex items-center gap-1.5 cursor-pointer border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
+                style={{ fontFamily: 'var(--font-heading)' }}
+                title="Open Sprint Planning to stage user stories"
+              >
+                <ClipboardList className="w-4 h-4 text-[#1E222A]" />
+                <span>Plan Sprint</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -289,13 +295,16 @@ export const KanbanBoardTab: React.FC<KanbanBoardTabProps> = ({
               <div className="py-12 px-4 text-center text-slate-500 text-xs">
                 <Layers className="w-8 h-8 mx-auto mb-2 opacity-40 text-slate-400" />
                 <p className="font-bold">No stories waiting in backlog.</p>
-                <button
-                  onClick={() => onSpawnStory()}
-                  className="mt-3 px-4 py-1.5 text-xs font-black text-[#1E222A] bg-[#FFD200] hover:bg-[#FFE043] rounded-xl border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] transition-all cursor-pointer"
-                  style={{ fontFamily: 'var(--font-heading)' }}
-                >
-                  + Pull New Story
-                </button>
+                {onOpenSprintPlanning && (
+                  <button
+                    onClick={onOpenSprintPlanning}
+                    className="mt-3 px-4 py-1.5 text-xs font-black text-[#1E222A] bg-[#FFD200] hover:bg-[#FFE043] rounded-xl border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] transition-all cursor-pointer inline-flex items-center gap-1.5"
+                    style={{ fontFamily: 'var(--font-heading)' }}
+                  >
+                    <ClipboardList className="w-3.5 h-3.5 text-[#1E222A]" />
+                    <span>Plan Sprint</span>
+                  </button>
+                )}
               </div>
             ) : (
               filteredTodo.map((v) => (
