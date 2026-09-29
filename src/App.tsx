@@ -70,6 +70,11 @@ export default function App() {
     closeMainMenu,
     resumeGame,
     startNewFreePlayGame,
+    // Season
+    seasonNumber,
+    nextSeason,
+    prevSeason,
+    changeSeason,
     // Actions
     addFunds,
     setDailyDuration,
@@ -151,8 +156,8 @@ export default function App() {
         isRetroOpen={!!sprintSummary}
       />
 
-      {/* Main Content Area with generous 24px-32px padding */}
-      <main className="flex-1 max-w-[1440px] w-full mx-auto p-6 sm:p-8 space-y-8">
+      {/* Main Content Area enlarged for maximized play area and readability */}
+      <main className="flex-1 max-w-[1580px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {activeTab === 'simulation' && (
           <div className="space-y-8">
             {/* Active Predetermined Scenario Objective HUD */}
@@ -310,6 +315,10 @@ export default function App() {
         totalPoints={totalDeliveredPoints}
         ferryPoints={ferry.currentPoints}
         ferryCapacity={ferry.capacity}
+        seasonNumber={seasonNumber}
+        onNextSeason={nextSeason}
+        onPrevSeason={prevSeason}
+        onChangeSeason={changeSeason}
         activeScenarioTitle={activeScenarioDef?.title}
         soundEnabled={settings.soundEnabled}
         continuousFlowMode={settings.continuousFlowMode}

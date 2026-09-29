@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Play,
   RotateCcw,
@@ -17,7 +17,6 @@ import {
   AlertTriangle,
   ArrowRight,
   ShieldCheck,
-  Hexagon,
   Anchor,
   Zap,
   Sliders,
@@ -30,6 +29,7 @@ import { PREDETERMINED_SCENARIOS } from '../data/scenarios';
 import { ScenarioDefinition, ScenarioDifficulty } from '../types/scenarios';
 import { sound } from '../utils/audio';
 import { RivetCorners } from './RivetCorners';
+import { getShipForSeason, ShipInfo, SHIP_NAMES_LIST } from '../data/shipNames';
 
 interface MainMenuProps {
   isOpen: boolean;
@@ -40,6 +40,10 @@ interface MainMenuProps {
   totalPoints: number;
   ferryPoints: number;
   ferryCapacity: number;
+  seasonNumber?: number;
+  onNextSeason?: () => void;
+  onPrevSeason?: () => void;
+  onChangeSeason?: (season: number) => void;
   activeScenarioTitle?: string;
   soundEnabled: boolean;
   continuousFlowMode: boolean;
@@ -93,6 +97,10 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   totalPoints,
   ferryPoints,
   ferryCapacity,
+  seasonNumber = 1,
+  onNextSeason,
+  onPrevSeason,
+  onChangeSeason,
   activeScenarioTitle,
   soundEnabled,
   continuousFlowMode,
@@ -111,6 +119,8 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   const [activeMenuTab, setActiveMenuTab] = useState<MenuTab>('main');
   const [selectedVehicleTip, setSelectedVehicleTip] = useState<VehicleShowcaseItem | null>(null);
   const [confirmRestartOpen, setConfirmRestartOpen] = useState<boolean>(false);
+
+  const currentShip: ShipInfo = useMemo(() => getShipForSeason(seasonNumber), [seasonNumber]);
 
   // Keyboard shortcut listener: Space/Enter to Start/Resume, Esc to return to main
   useEffect(() => {
@@ -186,60 +196,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
       </div>
 
       <div className="relative w-full max-w-5xl my-auto px-4 sm:px-6 py-6 sm:py-8 z-10 flex flex-col space-y-6">
-        {/* Top Floating Utility Bar */}
-        <header className="flex flex-wrap items-center justify-between gap-3 bg-[#1E222A]/90 backdrop-blur-md px-4 sm:px-6 py-3 rounded-2xl border-[3px] border-[#1E222A] shadow-[0_6px_0_#1E222A]">
-          <div className="flex items-center gap-3">
-            {/* HEXperience Corporate Identity Pill in Huntington Bank Colors */}
-            <div
-              className="flex items-center gap-2 px-3 py-1.5 bg-[#004831] border-2 border-[#66BD29] rounded-xl shadow-[0_2px_0_#1E222A]"
-              title="Engineered by HEXperience · Huntington Bank Colorway"
-            >
-              <Hexagon className="w-4 h-4 text-[#66BD29] fill-[#66BD29]/20" />
-              <span className="text-xs font-mono font-black text-white tracking-tight">
-                HEX<span className="text-[#66BD29]">perience</span>
-              </span>
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-[#66BD29] text-[#003624] font-black">
-                Agile Ops
-              </span>
-            </div>
-
-            <span className="hidden sm:inline-block text-xs font-mono text-slate-400 font-bold">
-              Sprint Tolls v1.0.0 &bull; Flow Simulator
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {/* Sound Toggle Button with Audio Test */}
-            <button
-              onClick={() => {
-                onToggleSound();
-                sound.playClick();
-              }}
-              className={`px-3 py-1.5 rounded-xl border-2 border-[#1E222A] font-bold text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_2px_0_#1E222A] active:translate-y-0.5 ${
-                soundEnabled
-                  ? 'bg-[#FFD200] text-[#1E222A] hover:bg-[#FFE043]'
-                  : 'bg-[#2B2F38] text-slate-400 hover:text-white'
-              }`}
-              title={soundEnabled ? 'Audio Sound FX Active (Click to Mute)' : 'Audio Muted (Click to Enable)'}
-            >
-              {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-              <span className="font-mono">{soundEnabled ? 'FX ON' : 'MUTED'}</span>
-            </button>
-
-            {/* Quick Resume Button in Header if active game */}
-            {hasActiveGame && (
-              <button
-                onClick={onResumeGame}
-                className="px-3 py-1.5 rounded-xl bg-[#66BD29] hover:bg-[#77D236] text-[#003624] border-2 border-[#1E222A] font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shadow-[0_2px_0_#1E222A] active:translate-y-0.5"
-                style={{ fontFamily: 'var(--font-heading)' }}
-              >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Resume Shift</span>
-              </button>
-            )}
-          </div>
-        </header>
-
         {/* Hero Section: Game Logo Lockup & Animated Port Harbor Scene */}
         <div className="relative p-6 sm:p-8 bg-[#F4F6F9] border-[3.5px] border-[#1E222A] rounded-3xl shadow-[0_12px_0_#1E222A] text-[#1E222A] overflow-hidden">
           <RivetCorners />
@@ -269,7 +225,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               <div className="flex items-center justify-between border-b border-slate-700 pb-2 mb-2">
                 <div className="flex items-center gap-1.5 text-xs font-black text-[#FFD200]">
                   <Anchor className="w-4 h-4" />
-                  <span>BERTH #1 &bull; S.S. RELEASE</span>
+                  <span>BERTH #1 &bull; {currentShip.name.toUpperCase()}</span>
                 </div>
                 <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse" title="Berth Ready for Boarding" />
               </div>
@@ -295,16 +251,46 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   {/* Vessel Hull */}
                   <div className="w-28 h-7 bg-[#FFD200] border-2 border-[#1E222A] rounded-b-xl flex items-center justify-center shadow-md relative">
                     <span className="text-[9px] font-mono font-black text-[#1E222A] tracking-wider">
-                      FERRY-V1
+                      {currentShip.shortTag}
                     </span>
                     <span className="absolute right-1 text-[10px]">🚢</span>
                   </div>
                 </div>
               </div>
 
-              <div className="mt-2.5 flex items-center justify-between text-[11px] font-mono font-bold text-slate-300">
-                <span>Daily Cadence:</span>
-                <span className="text-[#FFD200]">09:00 AM &ndash; 05:00 PM</span>
+              <div className="mt-2.5 pt-2 border-t border-slate-700/60 flex items-center justify-between text-[11px] font-mono font-bold text-slate-300">
+                <span className="text-slate-400">Season {seasonNumber}:</span>
+                <div className="flex items-center gap-1.5">
+                  {onPrevSeason && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sound.playClick();
+                        onPrevSeason();
+                      }}
+                      className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-[#FFD200] rounded font-black text-[10px] cursor-pointer"
+                      title="Previous Season Ship"
+                    >
+                      &larr;
+                    </button>
+                  )}
+                  <span className="text-[#FFD200] font-black text-right truncate max-w-[130px]" title={`${currentShip.fullName} • ${currentShip.motto}`}>
+                    {currentShip.name} (#{currentShip.hullNumber})
+                  </span>
+                  {onNextSeason && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        sound.playClick();
+                        onNextSeason();
+                      }}
+                      className="px-1.5 py-0.5 bg-slate-800 hover:bg-slate-700 text-[#FFD200] rounded font-black text-[10px] cursor-pointer"
+                      title="Next Season Ship"
+                    >
+                      &rarr;
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -412,39 +398,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           <button
             onClick={() => {
               sound.playClick();
-              setActiveMenuTab('main');
-            }}
-            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              activeMenuTab === 'main'
-                ? 'bg-[#FFD200] text-[#1E222A] shadow-[0_3px_0_#1E222A]'
-                : 'text-slate-300 hover:text-white'
-            }`}
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            <Play className="w-4 h-4 fill-current" />
-            <span>Launch Operations</span>
-          </button>
-
-          <button
-            onClick={() => {
-              sound.playClick();
-              setActiveMenuTab('scenarios');
-            }}
-            className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-              activeMenuTab === 'scenarios'
-                ? 'bg-[#FFD200] text-[#1E222A] shadow-[0_3px_0_#1E222A]'
-                : 'text-slate-300 hover:text-white'
-            }`}
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            <Flag className="w-4 h-4" />
-            <span>Scenario Challenges ({PREDETERMINED_SCENARIOS.length})</span>
-          </button>
-
-          <button
-            onClick={() => {
-              sound.playClick();
-              setActiveMenuTab('howToPlay');
+              setActiveMenuTab(activeMenuTab === 'howToPlay' ? 'main' : 'howToPlay');
             }}
             className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeMenuTab === 'howToPlay'
@@ -460,7 +414,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
           <button
             onClick={() => {
               sound.playClick();
-              setActiveMenuTab('settings');
+              setActiveMenuTab(activeMenuTab === 'settings' ? 'main' : 'settings');
             }}
             className={`flex-1 py-2.5 px-4 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
               activeMenuTab === 'settings'
@@ -676,14 +630,14 @@ export const MainMenu: React.FC<MainMenuProps> = ({
               </div>
             </div>
 
-            {/* Quick Secondary Support Dock: Agile Academy, Sprint Planning & Upgrades */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Quick Secondary Support Dock: Agile Academy */}
+            <div>
               <button
                 onClick={() => {
                   sound.playClick();
                   onOpenAcademy();
                 }}
-                className="p-4 rounded-2xl bg-[#1E222A] border-[2.5px] border-[#1E222A] hover:border-[#FFD200] text-white flex items-center gap-3.5 shadow-[0_4px_0_#1E222A] active:translate-y-0.5 cursor-pointer text-left transition-all group"
+                className="w-full p-4 rounded-2xl bg-[#1E222A] border-[2.5px] border-[#1E222A] hover:border-[#FFD200] text-white flex items-center gap-3.5 shadow-[0_4px_0_#1E222A] active:translate-y-0.5 cursor-pointer text-left transition-all group"
               >
                 <div className="w-11 h-11 rounded-2xl bg-[#FFD200] text-[#1E222A] border-2 border-[#1E222A] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
                   <GraduationCap className="w-6 h-6" />
@@ -694,46 +648,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   </div>
                   <div className="text-xs text-slate-300 font-medium">
                     Learn Little's Law, WIP discipline, and earn bonus treasury!
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  sound.playClick();
-                  onOpenSprintPlanning();
-                }}
-                className="p-4 rounded-2xl bg-[#1E222A] border-[2.5px] border-[#1E222A] hover:border-[#48A2D8] text-white flex items-center gap-3.5 shadow-[0_4px_0_#1E222A] active:translate-y-0.5 cursor-pointer text-left transition-all group"
-              >
-                <div className="w-11 h-11 rounded-2xl bg-[#48A2D8] text-white border-2 border-[#1E222A] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Clock className="w-6 h-6" />
-                </div>
-                <div>
-                  <div className="text-sm font-black text-white" style={{ fontFamily: 'var(--font-heading)' }}>
-                    Parking Lot Staging
-                  </div>
-                  <div className="text-xs text-slate-300 font-medium">
-                    Stage stories from the backlog and commit batches before launch.
-                  </div>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  sound.playClick();
-                  if (onOpenUpgrades) onOpenUpgrades();
-                }}
-                className="p-4 rounded-2xl bg-[#1E222A] border-[2.5px] border-[#1E222A] hover:border-[#E85D04] text-white flex items-center gap-3.5 shadow-[0_4px_0_#1E222A] active:translate-y-0.5 cursor-pointer text-left transition-all group"
-              >
-                <div className="w-11 h-11 rounded-2xl bg-[#E85D04] text-white border-2 border-[#1E222A] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                  <Wrench className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <div className="text-sm font-black text-[#FFD200]" style={{ fontFamily: 'var(--font-heading)' }}>
-                    Harbor Works &amp; Upgrades
-                  </div>
-                  <div className="text-xs text-slate-300 font-medium">
-                    Upgrade booth multipliers, automated E-ZPass gates, and ferry capacity.
                   </div>
                 </div>
               </button>
@@ -1054,6 +968,68 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                       {spd}x
                     </button>
                   ))}
+                </div>
+              </div>
+
+              {/* Active User Season & Release Fleet Vessel (Hull #20 - #99) */}
+              <div className="p-4 rounded-2xl bg-white border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Ship className="w-4 h-4 text-[#48A2D8]" />
+                    <span className="font-black text-sm text-[#1E222A]" style={{ fontFamily: 'var(--font-heading)' }}>
+                      Active User Season &amp; Release Fleet Vessel
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="px-2.5 py-1 rounded-xl bg-[#FFD200] border-2 border-[#1E222A] text-xs font-mono font-black text-[#1E222A]">
+                      Season #{seasonNumber}
+                    </span>
+                    <span className="px-2.5 py-1 rounded-xl bg-[#48A2D8] border-2 border-[#1E222A] text-xs font-mono font-black text-white">
+                      Hull #{currentShip.hullNumber}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-3.5 rounded-2xl bg-slate-50 border-2 border-[#1E222A]/15 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div className="space-y-1">
+                    <div className="font-black text-base text-[#1E222A] flex items-center gap-2" style={{ fontFamily: 'var(--font-heading)' }}>
+                      <span>{currentShip.name}</span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-[#FFD200] border border-[#1E222A] font-black text-[#1E222A]">
+                        {currentShip.shortTag}
+                      </span>
+                    </div>
+                    <div className="text-xs text-slate-600 font-bold">{currentShip.classType}</div>
+                    <div className="text-xs text-[#004831] font-semibold italic">&ldquo;{currentShip.motto}&rdquo;</div>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    {onPrevSeason && (
+                      <button
+                        onClick={() => {
+                          sound.playClick();
+                          onPrevSeason();
+                        }}
+                        className="px-3 py-2 rounded-xl border-2 border-[#1E222A] bg-slate-100 hover:bg-slate-200 font-black text-xs cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5"
+                      >
+                        &larr; Prev Season
+                      </button>
+                    )}
+                    {onNextSeason && (
+                      <button
+                        onClick={() => {
+                          sound.playClick();
+                          onNextSeason();
+                        }}
+                        className="px-3 py-2 rounded-xl border-2 border-[#1E222A] bg-[#FFD200] hover:bg-[#FFE043] font-black text-xs text-[#1E222A] cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5"
+                      >
+                        Next Season &rarr;
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                <div className="text-[11px] text-slate-500 font-medium">
+                  Continuous delivery release sprints operate with a distinctive vessel chosen for each user season across the Huntington continuous delivery fleet (80 ships, Hull #20 through #99).
                 </div>
               </div>
             </div>

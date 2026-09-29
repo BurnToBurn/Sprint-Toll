@@ -110,6 +110,9 @@ export interface FerryDock {
   sailProgress: number; // 0 to 100
   sprintNumber: number; // Sprint / Day number
   dayNumber: number;
+  seasonNumber?: number; // User Season number (Season 1 = Ship 20, Season 2 = Ship 21, etc.)
+  shipName?: string; // Current season release vessel name
+  shipTag?: string; // e.g. VEL-20
   dayPhase: DayPhase;
   dayTimeFormatted: string; // e.g. "09:00 AM", "02:30 PM", "05:00 PM (DEPARTURE)"
   sprintTimer: number; // seconds remaining in current daily cycle

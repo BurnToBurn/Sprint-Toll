@@ -20,6 +20,7 @@ import { sound } from '../utils/audio';
 import { STORY_TEMPLATES } from '../utils/agileLessons';
 import { getBoothCooldownDuration, generateRandomBoothIncident } from '../data/incidents';
 import { generateDailyBacklog, preSelectOptimalBatch } from '../data/backlog';
+import { getShipForSeason, SHIP_NAMES_LIST, ShipInfo } from '../data/shipNames';
 
 /**
  * Calculates daily operating dues and taxes incurred by higher efficiency booths,
@@ -264,6 +265,9 @@ const INITIAL_FERRY: FerryDock = {
   sailProgress: 0,
   sprintNumber: 1,
   dayNumber: 1,
+  seasonNumber: 1,
+  shipName: 'S.S. Velocity',
+  shipTag: 'VEL-20',
   dayPhase: 'planning',
   dayTimeFormatted: '09:00 AM (Planning)',
   sprintTimer: 45,
@@ -276,11 +280,31 @@ const INITIAL_FERRY: FerryDock = {
 };
 
 export function useGameEngine() {
+  const [seasonNumber, setSeasonNumber] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('sprint_tolls_season');
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 1) return parsed;
+      }
+    } catch {
+      // ignore
+    }
+    return 1;
+  });
+
+  const currentShip: ShipInfo = useMemo(() => getShipForSeason(seasonNumber), [seasonNumber]);
+
   const [funds, setFunds] = useState<number>(200);
   const [pendingDailyRevenue, setPendingDailyRevenue] = useState<number>(0);
   const [totalDeliveredPoints, setTotalDeliveredPoints] = useState<number>(0);
   const [booths, setBooths] = useState<TollBooth[]>(INITIAL_BOOTHS);
-  const [ferry, setFerry] = useState<FerryDock>(INITIAL_FERRY);
+  const [ferry, setFerry] = useState<FerryDock>(() => ({
+    ...INITIAL_FERRY,
+    seasonNumber,
+    shipName: currentShip.name,
+    shipTag: currentShip.shortTag
+  }));
   const [vehicles, setVehicles] = useState<VehicleStory[]>([]);
   const [sprintSummary, setSprintSummary] = useState<SprintSummary | null>(null);
   const [lastSprintSummary, setLastSprintSummary] = useState<SprintSummary | null>(null);
@@ -363,6 +387,33 @@ export function useGameEngine() {
     stateRef.current.isMainMenuOpen = isMainMenuOpen;
     stateRef.current.hasStartedGame = hasStartedGame;
   }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, hasStartedGame]);
+
+  // Synchronize season changes to localStorage and ferry state
+  useEffect(() => {
+    try {
+      localStorage.setItem('sprint_tolls_season', String(seasonNumber));
+    } catch {
+      // ignore
+    }
+    setFerry((prev) => ({
+      ...prev,
+      seasonNumber,
+      shipName: currentShip.name,
+      shipTag: currentShip.shortTag
+    }));
+  }, [seasonNumber, currentShip]);
+
+  const nextSeason = useCallback(() => {
+    setSeasonNumber((prev) => prev + 1);
+  }, []);
+
+  const prevSeason = useCallback(() => {
+    setSeasonNumber((prev) => Math.max(1, prev - 1));
+  }, []);
+
+  const changeSeason = useCallback((num: number) => {
+    setSeasonNumber(Math.max(1, Math.floor(num)));
+  }, []);
 
   // Helper to pick story point with weighted distribution
   const pickRandomStoryPoint = useCallback((): StoryPoint => {
@@ -1765,7 +1816,7 @@ export function useGameEngine() {
               other.x > v.x
           );
 
-          let maxDockX = 650;
+          let maxDockX = 480;
           if (aheadInLane.length > 0) {
             const closest = aheadInLane.reduce(
               (min, other) => (other.x < min.x ? other : min),
@@ -1780,8 +1831,8 @@ export function useGameEngine() {
             v.x = Math.min(maxDockX, v.x + (v.speed + 1.2) * dt * 50 * speedScale);
           }
 
-          // Reach Ferry Dock ramp (around X = 635)
-          if (v.x >= 635) {
+          // Reach Ferry Dock ramp (around X = 465)
+          if (v.x >= 465) {
             v.state = 'on_ferry';
             newBoardedVehicles.push(v);
           }
@@ -1794,7 +1845,7 @@ export function useGameEngine() {
               other.x > v.x
           );
 
-          let dockStopX = 620 - v.length;
+          let dockStopX = 450 - v.length;
           if (carsAtDock.length > 0) {
             const closestAtDock = carsAtDock.reduce(
               (min, other) => (other.x < min.x ? other : min),
@@ -2247,6 +2298,9 @@ export function useGameEngine() {
     // Reset ferry to Day 1 morning
     const resetFerry: FerryDock = {
       ...INITIAL_FERRY,
+      seasonNumber,
+      shipName: currentShip.name,
+      shipTag: currentShip.shortTag,
       dayNumber: 1,
       sprintNumber: 1,
       dayPhase: 'morning',
@@ -2376,6 +2430,9 @@ export function useGameEngine() {
 
     const resetFerry: FerryDock = {
       ...INITIAL_FERRY,
+      seasonNumber,
+      shipName: currentShip.name,
+      shipTag: currentShip.shortTag,
       dayNumber: 1,
       sprintNumber: 1,
       dayPhase: 'morning',
@@ -2459,6 +2516,13 @@ export function useGameEngine() {
     closeMainMenu,
     resumeGame,
     startNewFreePlayGame,
+    // User Season & Fleet Ships
+    seasonNumber,
+    setSeasonNumber,
+    currentShip,
+    nextSeason,
+    prevSeason,
+    changeSeason,
     // Actions
     addFunds,
     setDailyDuration,

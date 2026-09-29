@@ -13,10 +13,7 @@ import {
   ClipboardList,
   TrendingUp,
   Columns3,
-  Hexagon,
-  Flag,
-  Wrench,
-  Home
+  Wrench
 } from 'lucide-react';
 import { GameSettings, FerryDock, DailyForecast } from '../types/game';
 
@@ -120,32 +117,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             </span>
           </div>
         </button>
-
-        {/* Development Company Pill (HEXperience in Huntington Bank colors) */}
-        <div
-          className="hidden md:flex items-center gap-1.5 px-2.5 py-1.5 bg-[#004831] border-2 border-[#66BD29] rounded-xl shadow-[0_2px_0_#1E222A] select-none"
-          title="Engineered by HEXperience · Huntington Bank Colorway"
-        >
-          <Hexagon className="w-3.5 h-3.5 text-[#66BD29] fill-[#66BD29]/20" />
-          <span className="text-[11px] font-mono font-black text-white tracking-tight">
-            HEX<span className="text-[#66BD29]">perience</span>
-          </span>
-        </div>
       </div>
 
       {/* Zone 2: Navigation controls as Chunky Segmented 3D Port Tabs */}
       <nav className="flex items-center gap-1.5 bg-[#1E222A] p-1.5 rounded-2xl border-[3px] border-[#1E222A] shadow-inner overflow-x-auto">
-        {onOpenMainMenu && (
-          <button
-            onClick={onOpenMainMenu}
-            className="px-3 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] bg-[#1E222A] hover:bg-[#2B2F38] text-[#FFD200] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
-            style={{ fontFamily: 'var(--font-heading)' }}
-            title="Open Main Menu & Settings (Pause Shift)"
-          >
-            <Home className="w-4 h-4 text-[#FFD200]" />
-            <span>Main Menu</span>
-          </button>
-        )}
         <button
           onClick={() => onTabChange('simulation')}
           className={`px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
@@ -227,32 +202,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
             <span>Upgrades</span>
             {hasAffordableUpgrades && (
               <span className="w-2.5 h-2.5 rounded-full bg-[#E85D04] ring-2 ring-[#1E222A] animate-pulse" />
-            )}
-          </button>
-        )}
-
-        {/* Predetermined Tech Scenarios Button */}
-        {onOpenScenarios && (
-          <button
-            onClick={onOpenScenarios}
-            className={`px-3 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none ${
-              activeScenarioTitle
-                ? 'bg-[#66BD29] text-white hover:bg-[#77D236] ring-2 ring-[#FFD200]'
-                : 'bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A]'
-            }`}
-            style={{ fontFamily: 'var(--font-heading)' }}
-            title={activeScenarioTitle ? `Active Scenario: ${activeScenarioTitle}` : 'Predetermined Tech Scenarios & Win/Lose Challenges'}
-          >
-            <Flag className={`w-4 h-4 ${activeScenarioTitle ? 'text-[#FFD200] animate-bounce' : 'text-[#1E222A]'}`} />
-            <span>Scenarios</span>
-            {activeScenarioTitle && activeScenarioDay && activeScenarioTotalDays ? (
-              <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-[#004831] text-white border border-[#66BD29]">
-                Day {activeScenarioDay}/{activeScenarioTotalDays}
-              </span>
-            ) : (
-              <span className="text-[10px] px-1.5 py-0.2 rounded-md bg-[#1E222A] text-[#FFD200] font-mono">
-                5 Tech
-              </span>
             )}
           </button>
         )}

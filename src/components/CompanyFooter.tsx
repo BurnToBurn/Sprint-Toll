@@ -16,7 +16,7 @@ export const CompanyFooter: React.FC = () => {
         {/* Huntington Bank Brand Color Top Accent Stripe */}
         <div className="h-1.5 w-full bg-gradient-to-r from-[#004831] via-[#66BD29] to-[#776F67]" />
 
-        <div className="max-w-[1440px] mx-auto px-6 sm:px-10 py-8">
+        <div className="max-w-[1580px] mx-auto px-6 sm:px-10 py-8">
           <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4 text-center sm:text-left">
             {/* Geometric Hexagon Logo Emblem in Huntington Green */}
             <button

@@ -79,11 +79,11 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   const [selectedViolationBooth, setSelectedViolationBooth] = useState<TollBooth | null>(null);
 
   // Calculate ferry position when sailing
-  let ferryX = 640;
+  let ferryX = 470;
   if (ferry.state === 'departing' || ferry.state === 'sailing') {
-    ferryX = 640 + (ferry.sailProgress / 100) * 450;
+    ferryX = 470 + (ferry.sailProgress / 100) * 450;
   } else if (ferry.state === 'returning') {
-    ferryX = 640 + (ferry.sailProgress / 100) * 450;
+    ferryX = 470 + (ferry.sailProgress / 100) * 450;
   }
 
   // Daily cycle timing & departure rule calculations
@@ -122,7 +122,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   }, [booths, vehicles, metrics]);
 
   return (
-    <div className="relative w-full h-[740px] sm:h-[760px] bg-[#2B2F38] border-[3px] border-[#1E222A] rounded-3xl overflow-hidden shadow-[0_8px_0_#1E222A] flex flex-col select-none">
+    <div className="relative w-full h-[800px] sm:h-[840px] lg:h-[880px] min-h-[720px] bg-[#2B2F38] border-[3px] border-[#1E222A] rounded-3xl overflow-hidden shadow-[0_8px_0_#1E222A] flex flex-col select-none">
       {/* Decorative Corner Rivets */}
       <div className="rivet top-2.5 left-2.5" />
       <div className="rivet top-2.5 right-2.5" />
@@ -171,22 +171,6 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
         {/* Departure Criteria & Countdown Clock */}
         <div className="flex items-center gap-3 font-mono">
-          {/* Quick Continual Flow Toggle Button in HUD */}
-          {onToggleContinuousFlow && (
-            <button
-              onClick={onToggleContinuousFlow}
-              className={`hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-xl border-2 border-[#1E222A] text-xs font-black transition-all cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none ${
-                continuousFlowMode
-                  ? 'bg-[#FFD200] text-[#1E222A]'
-                  : 'bg-[#2B2F38] text-slate-300 hover:text-white'
-              }`}
-              title="Continual Flow: Stream user stories constantly to eliminate idle booths"
-            >
-              <span className={`w-2 h-2 rounded-full ${continuousFlowMode ? 'bg-[#E85D04] animate-ping' : 'bg-slate-500'}`} />
-              <span>{continuousFlowMode ? '⚡ FLOW: CONTINUAL' : '⏸ FLOW: BATCH'}</span>
-            </button>
-          )}
-
           {ferry.state === 'boarding' ? (
             <div
               className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl border-2 border-[#1E222A] text-xs font-black transition-all shadow-[0_3px_0_#1E222A] ${
@@ -304,7 +288,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
       {/* Simulation World SVG Canvas */}
       <div className="relative flex-1 w-full h-full overflow-hidden">
         <svg
-          viewBox="-420 0 1520 500"
+          viewBox="-415 0 1285 500"
           className="w-full h-full preserve-3d"
           preserveAspectRatio="xMidYMid meet"
         >
@@ -356,36 +340,36 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
           {/* 1. BACKGROUND LAYERS */}
           {/* Extended Highway & Toll Plaza Surface */}
-          <rect x="-420" y="20" width="1020" height="470" fill="url(#roadGrad)" />
+          <rect x="-420" y="20" width="850" height="470" fill="url(#roadGrad)" />
 
           {/* Ocean Water Zone */}
-          <rect x="600" y="20" width="500" height="470" fill="url(#waterGrad)" opacity="0.9" />
+          <rect x="430" y="20" width="460" height="470" fill="url(#waterGrad)" opacity="0.9" />
 
           {/* Animated Wave Ripples in Water */}
           <g opacity="0.35">
             <path
-              d="M 620 60 Q 660 50, 700 60 T 780 60 T 860 60 T 940 60 T 1020 60"
+              d="M 450 60 Q 490 50, 530 60 T 610 60 T 690 60 T 770 60 T 850 60"
               fill="none"
               stroke="#e0f2fe"
               strokeWidth="2"
               strokeDasharray="8 12"
             />
             <path
-              d="M 640 180 Q 680 170, 720 180 T 800 180 T 880 180 T 960 180 T 1040 180"
+              d="M 470 180 Q 510 170, 550 180 T 630 180 T 710 180 T 790 180 T 870 180"
               fill="none"
               stroke="#bae6fd"
               strokeWidth="1.5"
               strokeDasharray="6 14"
             />
             <path
-              d="M 610 320 Q 650 310, 690 320 T 770 320 T 850 320 T 930 320 T 1010 320"
+              d="M 440 320 Q 480 310, 520 320 T 600 320 T 680 320 T 760 320 T 840 320"
               fill="none"
               stroke="#e0f2fe"
               strokeWidth="2"
               strokeDasharray="10 15"
             />
             <path
-              d="M 630 440 Q 670 430, 710 440 T 790 440 T 870 440 T 950 440 T 1030 440"
+              d="M 460 440 Q 500 430, 540 440 T 620 440 T 700 440 T 780 440 T 860 440"
               fill="none"
               stroke="#bae6fd"
               strokeWidth="1.5"
@@ -394,12 +378,12 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
           </g>
 
           {/* Coastal Pier / Quayside */}
-          <rect x="585" y="20" width="40" height="470" fill="url(#pierWood)" />
-          <line x1="625" y1="20" x2="625" y2="490" stroke="#1c1917" strokeWidth="3" />
+          <rect x="415" y="20" width="40" height="470" fill="url(#pierWood)" />
+          <line x1="455" y1="20" x2="455" y2="490" stroke="#1c1917" strokeWidth="3" />
 
           {/* Pier Bollards */}
           {[60, 140, 220, 300, 380, 460].map((by) => (
-            <circle key={by} cx="615" cy={by} r="5" fill="#78716c" stroke="#292524" strokeWidth="2" />
+            <circle key={by} cx="445" cy={by} r="5" fill="#78716c" stroke="#292524" strokeWidth="2" />
           ))}
 
           {/* 2. HIGHWAY LANES, DUAL-SIDE SPRINT PARKING LOT & TOLL ISLANDS */}
@@ -656,13 +640,13 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                   strokeDasharray="10 10"
                 />
 
-                {/* Locked lane overlay (from x=195 to x=585) */}
+                {/* Locked lane overlay (from x=195 to pier x=415) */}
                 {!isUnlocked && (
                   <g>
                     <rect
                       x="195"
                       y={laneY - 2}
-                      width="390"
+                      width="220"
                       height={LANE_HEIGHT + 4}
                       fill="#090d16"
                       opacity="0.85"
@@ -1068,10 +1052,10 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
           {/* 3. DOCK MERGE ARROWS & RAMP */}
           <g opacity="0.6">
-            <line x1="370" y1="260" x2="570" y2="260" stroke="#475569" strokeWidth="2" strokeDasharray="8 8" />
-            <polygon points="565,255 580,260 565,265" fill="#94a3b8" />
-            <text x="430" y="245" fill="#94a3b8" fontSize="9" fontWeight="bold" letterSpacing="1">
-              TO SPRINT FERRY DOCK →
+            <line x1="365" y1="260" x2="410" y2="260" stroke="#475569" strokeWidth="2" strokeDasharray="4 4" />
+            <polygon points="405,256 415,260 405,264" fill="#94a3b8" />
+            <text x="368" y="248" fill="#94a3b8" fontSize="8" fontWeight="bold" letterSpacing="0.5">
+              DOCK →
             </text>
           </g>
 
@@ -1119,13 +1103,13 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             <rect x="210" y="140" width="55" height="100" rx="6" fill="#f8fafc" stroke="#94a3b8" strokeWidth="1.5" />
             <rect x="220" y="150" width="35" height="20" rx="3" fill="#0284c7" />
             <circle cx="237" cy="190" r="8" fill="#e0f2fe" stroke="#0284c7" strokeWidth="2" />
-            <text x="218" y="225" fill="#0f172a" fontSize="7.5" fontWeight="bold">
-              BRIDGE
+            <text x="237" y="225" textAnchor="middle" fill="#0f172a" fontSize="7.5" fontWeight="bold">
+              {ferry.shipTag || 'VEL-20'}
             </text>
 
             {/* Ferry Name & Sprint Number */}
             <text x="50" y="30" fill="#bae6fd" fontSize="11" fontWeight="bold" letterSpacing="1">
-              MV VELOCITY · SPRINT #{ferry.sprintNumber}
+              {(ferry.shipName || 'S.S. VELOCITY').toUpperCase()} · SPRINT #{ferry.sprintNumber}
             </text>
 
             {/* Capacity Progress Bar on Deck */}
@@ -1310,18 +1294,18 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                 <circle
                   cx={v.length / 2 - 2}
                   cy={v.width / 2}
-                  r="7"
+                  r="7.5"
                   fill="#0f172a"
                   stroke="#ffffff"
-                  strokeWidth="0.8"
+                  strokeWidth="1"
                 />
                 <text
                   x={v.length / 2 - 2}
                   y={v.width / 2 + 3}
                   textAnchor="middle"
                   fill="#ffffff"
-                  fontSize="8"
-                  fontWeight="bold"
+                  fontSize="8.5"
+                  fontWeight="black"
                   fontFamily="var(--font-mono)"
                 >
                   {v.points}
