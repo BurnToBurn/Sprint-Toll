@@ -3,12 +3,10 @@ import { useGameEngine } from './hooks/useGameEngine';
 import { HeaderBar } from './components/HeaderBar';
 import { TollSimulationCanvas } from './components/TollSimulationCanvas';
 import { UpgradePanel } from './components/UpgradePanel';
-import { FlowMetricsPanel } from './components/FlowMetricsPanel';
 import { AgileAcademyModal } from './components/AgileAcademyModal';
 import { StoryInspectorModal } from './components/StoryInspectorModal';
 import { SprintRetrospectiveModal } from './components/SprintRetrospectiveModal';
 import { DailyForecastModal } from './components/DailyForecastModal';
-import { KanbanBoardTab } from './components/KanbanBoardTab';
 import { CompanyFooter } from './components/CompanyFooter';
 import { ScenarioSelectModal } from './components/ScenarioSelectModal';
 import { ScenarioOutcomeModal } from './components/ScenarioOutcomeModal';
@@ -16,7 +14,7 @@ import { ScenarioObjectiveHUD } from './components/ScenarioObjectiveHUD';
 import { SprintPlanningModal } from './components/SprintPlanningModal';
 
 export default function App() {
-  const [activeTab, setActiveTab] = useState<'simulation' | 'kanban' | 'academy' | 'metrics'>('simulation');
+  const [activeTab, setActiveTab] = useState<'simulation' | 'academy'>('simulation');
   const [isForecastOpen, setIsForecastOpen] = useState(false);
   const [isUpgradesOpen, setIsUpgradesOpen] = useState(false);
 
@@ -46,6 +44,7 @@ export default function App() {
     clearAllBacklog,
     sliceBacklogItem,
     addBacklogStory,
+    removeBacklogItem,
     stageStoryInParkingLot,
     commitSprintPlanning,
     dispatchNextFromParkingLot,
@@ -188,119 +187,7 @@ export default function App() {
               onDispatchFromParkingLot={dispatchNextFromParkingLot}
               onOpenSprintPlanning={openSprintPlanning}
             />
-
-            {/* Quick Metrics Bar: 4 Tactile Toy Telemetry Cards with 3px borders, rounded-2xl, and 3D shadows */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
-              <div className="relative p-5 bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-2xl shadow-[0_6px_0_#1E222A] text-[#1E222A] flex flex-col justify-between">
-                <div className="rivet top-2 left-2" />
-                <div className="rivet top-2 right-2" />
-                <div className="rivet bottom-2 left-2" />
-                <div className="rivet bottom-2 right-2" />
-                <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Port WIP Load
-                </span>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-2xl sm:text-3xl font-black text-[#1E222A] font-mono tabular-nums">
-                    {metrics.currentWIP}
-                  </span>
-                  <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-[#FFD200] border-2 border-[#1E222A] text-[#1E222A]">
-                    {metrics.wipPoints} pts
-                  </span>
-                </div>
-              </div>
-
-              <div className="relative p-5 bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-2xl shadow-[0_6px_0_#1E222A] text-[#1E222A] flex flex-col justify-between">
-                <div className="rivet top-2 left-2" />
-                <div className="rivet top-2 right-2" />
-                <div className="rivet bottom-2 left-2" />
-                <div className="rivet bottom-2 right-2" />
-                <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Throughput Rate
-                </span>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-2xl sm:text-3xl font-black text-[#48A2D8] font-mono tabular-nums">
-                    {metrics.throughputPointsPerMinute}
-                  </span>
-                  <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-[#48A2D8]/20 border-2 border-[#1E222A] text-[#1E222A]">
-                    pts / min
-                  </span>
-                </div>
-              </div>
-
-              <div className="relative p-5 bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-2xl shadow-[0_6px_0_#1E222A] text-[#1E222A] flex flex-col justify-between">
-                <div className="rivet top-2 left-2" />
-                <div className="rivet top-2 right-2" />
-                <div className="rivet bottom-2 left-2" />
-                <div className="rivet bottom-2 right-2" />
-                <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Mean Cycle Time
-                </span>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-2xl sm:text-3xl font-black text-[#E85D04] font-mono tabular-nums">
-                    {metrics.averageCycleTime}s
-                  </span>
-                  <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-[#E85D04]/20 border-2 border-[#1E222A] text-[#1E222A]">
-                    Lead: {metrics.averageLeadTime}s
-                  </span>
-                </div>
-              </div>
-
-              <div className="relative p-5 bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-2xl shadow-[0_6px_0_#1E222A] text-[#1E222A] flex flex-col justify-between">
-                <div className="rivet top-2 left-2" />
-                <div className="rivet top-2 right-2" />
-                <div className="rivet bottom-2 left-2" />
-                <div className="rivet bottom-2 right-2" />
-                <span className="text-xs uppercase font-extrabold tracking-wider text-slate-500" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Flow Efficiency
-                </span>
-                <div className="mt-2 flex items-baseline justify-between">
-                  <span className="text-2xl sm:text-3xl font-black text-[#D92525] font-mono tabular-nums">
-                    {metrics.flowEfficiency}%
-                  </span>
-                  <span className="text-xs font-black px-2 py-0.5 rounded-lg bg-[#FFD200] border-2 border-[#1E222A] text-[#1E222A]">
-                    Target: &gt;40%
-                  </span>
-                </div>
-              </div>
-            </div>
           </div>
-        )}
-
-        {activeTab === 'kanban' && (
-          <KanbanBoardTab
-            vehicles={vehicles}
-            booths={booths}
-            ferry={ferry}
-            metrics={metrics}
-            funds={funds}
-            onSelectVehicle={setSelectedVehicle}
-            onSliceStory={sliceStory}
-            onSetLaneWipLimit={setLaneWipLimit}
-            onLaunchFerry={launchFerry}
-            onOpenSprintPlanning={openSprintPlanning}
-            onSelectBooth={(id) => {
-              setSelectedBoothId(id);
-              setIsUpgradesOpen(true);
-            }}
-            onUpgradeEfficiency={upgradeBoothEfficiency}
-            onUpgradeAutomation={upgradeBoothAutomation}
-          />
-        )}
-
-        {activeTab === 'metrics' && (
-          <FlowMetricsPanel
-            metrics={metrics}
-            booths={booths}
-            onSelectBooth={(id) => {
-              setSelectedBoothId(id);
-              setIsUpgradesOpen(true);
-            }}
-            onOpenRetrospective={openLastRetrospective}
-            hasLastRetrospective={!!lastSprintSummary}
-            forecast={dailyForecast}
-            onOpenForecast={() => setIsForecastOpen(true)}
-            onSwitchToKanban={() => setActiveTab('kanban')}
-          />
         )}
 
         {activeTab === 'academy' && (
@@ -356,6 +243,7 @@ export default function App() {
         onSelectAll={selectAllBacklog}
         onClearAll={clearAllBacklog}
         onAddStory={addBacklogStory}
+        onRemoveItem={removeBacklogItem}
       />
 
       <StoryInspectorModal

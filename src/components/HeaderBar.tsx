@@ -31,7 +31,7 @@ interface HeaderBarProps {
   sprintTimer: number;
   ferryState: FerryDock['state'];
   settings: GameSettings;
-  activeTab: 'simulation' | 'kanban' | 'academy' | 'metrics';
+  activeTab: 'simulation' | 'academy';
   forecast: DailyForecast;
   onOpenForecast: () => void;
   onOpenScenarios?: () => void;
@@ -41,7 +41,7 @@ interface HeaderBarProps {
   activeScenarioTitle?: string;
   activeScenarioDay?: number;
   activeScenarioTotalDays?: number;
-  onTabChange: (tab: 'simulation' | 'kanban' | 'academy' | 'metrics') => void;
+  onTabChange: (tab: 'simulation' | 'academy') => void;
   onToggleSound: () => void;
   onSetSpeed: (speed: number) => void;
   onQuickSpawn?: () => void;
@@ -149,33 +149,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         </button>
 
         <button
-          onClick={() => onTabChange('kanban')}
-          className={`px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'kanban'
-              ? 'bg-[#FFD200] text-[#1E222A] border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A]'
-              : 'text-slate-300 hover:text-white hover:bg-[#2B2F38]'
-          }`}
-          style={{ fontFamily: 'var(--font-heading)' }}
-          title="Kanban Board View: To Do, In Progress, and Done"
-        >
-          <Columns3 className="w-4 h-4 text-[#E85D04]" />
-          Kanban Board
-        </button>
-
-        <button
-          onClick={() => onTabChange('metrics')}
-          className={`px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
-            activeTab === 'metrics'
-              ? 'bg-[#F4F6F9] text-[#1E222A] border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A]'
-              : 'text-slate-300 hover:text-white hover:bg-[#2B2F38]'
-          }`}
-          style={{ fontFamily: 'var(--font-heading)' }}
-        >
-          <BarChart3 className="w-4 h-4 text-[#48A2D8]" />
-          Flow Telemetry
-        </button>
-
-        <button
           onClick={() => onTabChange('academy')}
           className={`px-3 py-2 text-xs font-black rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer ${
             activeTab === 'academy'
@@ -214,7 +187,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
           </span>
         </button>
 
-        {/* Sprint Planning Button */}
+        {/* Parking Lot Staging Button */}
         {onOpenSprintPlanning && (
           <button
             onClick={onOpenSprintPlanning}
@@ -224,10 +197,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 : 'bg-[#1E222A] hover:bg-[#2B2F38] text-slate-200 border-[#384050]'
             }`}
             style={{ fontFamily: 'var(--font-heading)' }}
-            title="Open Sprint Planning phase to curate the Backlog and commit to the Parking Lot"
+            title="Open Parking Lot Staging to curate the Backlog and commit to the Parking Lot bays"
           >
             <ClipboardList className="w-4 h-4 text-[#FFD200]" />
-            <span>Sprint Plan</span>
+            <span>Parking Lot Staging</span>
           </button>
         )}
 

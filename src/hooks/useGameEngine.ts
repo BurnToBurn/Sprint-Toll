@@ -555,32 +555,113 @@ export function useGameEngine() {
     });
   }, []);
 
-  // Add a user-defined story (such as a 5-point story) directly to the backlog & sprint plan
+  // Add a user-defined story directly to the backlog & sprint plan with point-specific templates
   const addBacklogStory = useCallback((points: StoryPoint = 5, customTitle?: string) => {
     sound.playClick();
-    const titles5 = [
-      'OAuth 2.0 PKCE Session Refresh & Token Revocation',
-      'Redis Distributed Lock & Cache Invalidation Pipeline',
-      'Stripe Webhook Dead-Letter Queue & Idempotency Filter',
-      'PostgreSQL Connection Pool Auto-Scaler with PgBouncer',
-      'Real-Time WebSocket Reconnect Backoff & Heartbeat',
-      'Elasticsearch Multi-Cluster Shard Rebalancing',
-      'Kubernetes Ingress Rate Limiter & Envoy Proxy Filter'
-    ];
-    const title = customTitle || titles5[Math.floor(Math.random() * titles5.length)];
+    const titlePresets: Record<StoryPoint, string[]> = {
+      1: [
+        'Fix CSS button alignment on mobile viewport',
+        'Update npm patch security vulnerabilities',
+        'Correct currency formatting on checkout invoice',
+        'Fix typo in user onboarding toast message',
+        'Add aria-label to toll plaza navigation buttons'
+      ],
+      2: [
+        'Add CSV export button to toll metrics table',
+        'Implement tooltip for disabled ferry depart button',
+        'Log failed auth attempts to CloudWatch metrics',
+        'Sanitize input on vehicle license plate query',
+        'Add keyboard shortcut for lane WIP adjustment'
+      ],
+      3: [
+        'Implement dark mode preference persistence in localStorage',
+        'Add pagination controls to audit event stream',
+        'Send webhook notification on ferry departure',
+        'Optimize booth rendering with WebGL batching',
+        'Add vehicle speed telemetry gauge to HUD'
+      ],
+      5: [
+        'OAuth 2.0 PKCE Session Refresh & Token Revocation',
+        'Redis Distributed Lock & Cache Invalidation Pipeline',
+        'Stripe Webhook Dead-Letter Queue & Idempotency Filter',
+        'PostgreSQL Connection Pool Auto-Scaler with PgBouncer',
+        'Real-Time WebSocket Reconnect Backoff & Heartbeat',
+        'Elasticsearch Multi-Cluster Shard Rebalancing',
+        'Kubernetes Ingress Rate Limiter & Envoy Proxy Filter'
+      ],
+      8: [
+        'Multi-Tenant Role-Based Access Control Matrix Engine',
+        'Automated Database Failover & Replication Telemetry',
+        'Full-Text Search Engine Migration to Meilisearch',
+        'Distributed Saga Orchestration for Cross-Dock Billing',
+        'Zero-Downtime Blue/Green Microservices Deployment Pipeline'
+      ],
+      13: [
+        'End-to-End Payment Gateway Migration with Zero Downtime',
+        'Microservices Event-Driven Bus Architecture Overhaul',
+        'GDPR Automated Data Export & Subject Erasure Pipeline',
+        'High-Throughput Kafka Streaming Partition Rebalancer'
+      ],
+      21: [
+        'Legacy Monolith Core Database Decommission & Cloud Migration',
+        'Core Banking Distributed Consensus & Transaction Ledger'
+      ]
+    };
+
+    const titles = titlePresets[points] || titlePresets[5];
+    const title = customTitle || titles[Math.floor(Math.random() * titles.length)];
+
+    const descriptions: Record<StoryPoint, string> = {
+      1: 'Quick hotfix / patch for immediate toll verification.',
+      2: 'Small isolated enhancement to speed up throughput.',
+      3: 'Standard user story delivering verified incremental value.',
+      5: 'Core feature story ready for development and toll verification.',
+      8: 'Major multi-system epic component requiring coordinated flow.',
+      13: 'Large high-impact epic requiring significant toll concurrency.',
+      21: 'Monolithic legacy initiative requiring massive dock capacity.'
+    };
+
     const newItem: BacklogItem = {
-      id: `BL-${Date.now().toString().slice(-4)}`,
+      id: `BL-${Date.now().toString().slice(-4)}${Math.floor(Math.random() * 10)}`,
       title,
       points,
-      type: 'story',
-      businessValue: points === 5 ? 60 : points * 12,
-      priority: 'high',
+      type: points === 1 ? 'bug' : points >= 13 ? 'epic' : 'story',
+      businessValue: Math.round(points * 12 * (1 + Math.random() * 0.2)),
+      priority: points >= 8 ? 'critical' : points >= 5 ? 'high' : 'medium',
       category: 'Core API',
-      description: 'User-added 5-point sprint feature story ready for development and toll verification.',
+      description: descriptions[points] || 'Sprint story staged for toll flow.',
       selected: true,
       isCarryover: false
     };
     setBacklogItems((prev) => [newItem, ...prev]);
+  }, []);
+
+  // Remove an individual story from the backlog by ID
+  const removeBacklogItem = useCallback((id: string) => {
+    sound.playClick();
+    setBacklogItems((prev) => prev.filter((item) => item.id !== id));
+  }, []);
+
+  // Remove stories by point value (e.g., remove one or all stories matching the given points)
+  const removeStoriesByPoints = useCallback((points: StoryPoint, removeAll: boolean = false) => {
+    sound.playClick();
+    setBacklogItems((prev) => {
+      if (removeAll) {
+        return prev.filter((item) => item.points !== points);
+      }
+      // Remove the latest item matching this point value
+      const targetIdx = prev.findIndex((item) => item.points === points);
+      if (targetIdx === -1) return prev;
+      const copy = [...prev];
+      copy.splice(targetIdx, 1);
+      return copy;
+    });
+  }, []);
+
+  // Remove all currently selected backlog stories
+  const removeSelectedBacklogItems = useCallback(() => {
+    sound.playClick();
+    setBacklogItems((prev) => prev.filter((item) => !item.selected));
   }, []);
 
   // Stage a story (like a 5-point story) directly in the parking lot to immediately flow into the toll plaza
@@ -1276,7 +1357,8 @@ export function useGameEngine() {
       if (currFerry.dayPhase === 'planning') {
         // Paused during morning sprint planning phase
       } else if (currFerry.sprintTimer > 0) {
-        const newTimer = Math.max(0, currFerry.sprintTimer - dt);
+        // Daily sprint countdown timer runs 30% slower (0.7x elapsed rate)
+        const newTimer = Math.max(0, currFerry.sprintTimer - dt * 0.7);
 
         // Calculate work day progress & formatted work hour (09:00 AM to 05:00 PM)
         const dayProgress = Math.max(0, Math.min(1, 1 - newTimer / currFerry.sprintDuration));
@@ -2258,6 +2340,9 @@ export function useGameEngine() {
     clearAllBacklog,
     sliceBacklogItem,
     addBacklogStory,
+    removeBacklogItem,
+    removeStoriesByPoints,
+    removeSelectedBacklogItems,
     stageStoryInParkingLot,
     commitSprintPlanning,
     dispatchNextFromParkingLot,
