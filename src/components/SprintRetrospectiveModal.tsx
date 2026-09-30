@@ -20,7 +20,8 @@ import {
   ShieldCheck,
   Flag,
   Receipt,
-  Pause
+  Pause,
+  Target
 } from 'lucide-react';
 
 interface SprintRetrospectiveModalProps {
@@ -260,6 +261,158 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                 </div>
               </div>
 
+              {/* Parking Lot Commitment vs Delivery Evaluation Card */}
+              {summary.commitmentEvaluation && (
+                <div className="p-4 sm:p-5 rounded-2xl bg-white border-2 border-[#1E222A] space-y-4 shadow-[0_3px_0_#1E222A]">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#1E222A]/10 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-8 h-8 rounded-xl bg-[#1E222A] text-[#FFD200] flex items-center justify-center font-black shadow-sm text-sm">
+                        🅿️
+                      </div>
+                      <div>
+                        <div className="text-xs font-mono font-black uppercase text-slate-500 tracking-wider">
+                          Sprint Planning Telemetry
+                        </div>
+                        <h3 className="text-sm sm:text-base font-black text-[#1E222A] leading-tight" style={{ fontFamily: 'var(--font-heading)' }}>
+                          Parking Lot Commitment vs. Shipped Delivery
+                        </h3>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      {summary.commitmentEvaluation.evaluationStatus === 'over_delivered' ? (
+                        <span className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 border-2 border-emerald-400 font-mono font-black text-xs flex items-center gap-1.5 shadow-sm">
+                          <Sparkles className="w-3.5 h-3.5 text-[#FFD200] fill-current" />
+                          <span>Over-Delivered (+{summary.commitmentEvaluation.overDeliveredPoints} pts)</span>
+                        </span>
+                      ) : summary.commitmentEvaluation.evaluationStatus === 'exact_match' ? (
+                        <span className="px-3 py-1 rounded-xl bg-sky-100 text-sky-800 border-2 border-sky-400 font-mono font-black text-xs flex items-center gap-1.5 shadow-sm">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-sky-600" />
+                          <span>100% Commitment Match</span>
+                        </span>
+                      ) : (
+                        <span className="px-3 py-1 rounded-xl bg-amber-100 text-amber-800 border-2 border-amber-400 font-mono font-black text-xs flex items-center gap-1.5 shadow-sm">
+                          <AlertTriangle className="w-3.5 h-3.5 text-amber-600" />
+                          <span>Commitment Shortfall (-{summary.commitmentEvaluation.underDeliveredPoints} pts)</span>
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 3 Metric Badges: Committed vs Delivered vs Rate */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    {/* Committed */}
+                    <div className="p-3 bg-[#F4F6F9] border-2 border-[#1E222A] rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          Committed in Staging
+                        </div>
+                        <div className="text-xl font-black font-mono text-[#1E222A]">
+                          {summary.commitmentEvaluation.committedPoints} <span className="text-xs font-bold text-slate-500">pts</span>
+                        </div>
+                      </div>
+                      <div className="px-2 py-0.5 rounded-md bg-slate-200 border border-slate-400 text-slate-700 text-[10px] font-mono font-bold">
+                        {summary.commitmentEvaluation.committedStoriesCount} Stories
+                      </div>
+                    </div>
+
+                    {/* Delivered */}
+                    <div className="p-3 bg-[#F4F6F9] border-2 border-[#1E222A] rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          Delivered to Ferry Dock
+                        </div>
+                        <div className="text-xl font-black font-mono text-[#10b981]">
+                          {summary.commitmentEvaluation.deliveredPoints} <span className="text-xs font-bold text-slate-500">pts</span>
+                        </div>
+                      </div>
+                      <div className="px-2 py-0.5 rounded-md bg-emerald-100 border border-emerald-400 text-emerald-800 text-[10px] font-mono font-bold">
+                        {summary.commitmentEvaluation.deliveredStoriesCount} Stories
+                      </div>
+                    </div>
+
+                    {/* Execution Ratio */}
+                    <div className="p-3 bg-[#F4F6F9] border-2 border-[#1E222A] rounded-xl flex items-center justify-between">
+                      <div>
+                        <div className="text-[10px] font-bold uppercase tracking-wider text-slate-500">
+                          Commitment Execution
+                        </div>
+                        <div className={`text-xl font-black font-mono ${
+                          summary.commitmentEvaluation.completionRate >= 100
+                            ? 'text-[#10b981]'
+                            : summary.commitmentEvaluation.completionRate >= 80
+                            ? 'text-amber-600'
+                            : 'text-[#D92525]'
+                        }`}>
+                          {summary.commitmentEvaluation.completionRate}%
+                        </div>
+                      </div>
+                      <div className="text-[10px] font-mono font-bold text-slate-500">
+                        {summary.commitmentEvaluation.deliveredPoints >= summary.commitmentEvaluation.committedPoints
+                          ? `+${summary.commitmentEvaluation.overDeliveredPoints} pts surge`
+                          : `-${summary.commitmentEvaluation.underDeliveredPoints} pts roll`}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Over-Delivery Rewards Banner: Cash Bonus & Next Sprint Capacity Adjustment */}
+                  {summary.commitmentEvaluation.overDeliveredPoints > 0 ? (
+                    <div className="p-3.5 rounded-xl bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 border-2 border-emerald-500 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-[#004831] border-2 border-[#66BD29] text-[#FFD200] flex items-center justify-center font-black shrink-0 shadow-sm text-lg">
+                          💰
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-black text-emerald-950 uppercase tracking-wider" style={{ fontFamily: 'var(--font-heading)' }}>
+                              Over-Delivery Velocity Bonus Awarded
+                            </span>
+                            <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 font-black">
+                              +$35/pt
+                            </span>
+                          </div>
+                          <p className="text-xs text-emerald-800 font-semibold mt-0.5">
+                            Delivered <strong className="text-emerald-950">+{summary.commitmentEvaluation.overDeliveredPoints} extra story points</strong> beyond parking lot commitment!
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-4 w-full sm:w-auto justify-between sm:justify-end border-t sm:border-t-0 pt-2 sm:pt-0 border-emerald-200">
+                        {/* Cash Bonus */}
+                        <div className="text-right">
+                          <div className="text-[10px] uppercase font-bold text-slate-500">Treasury Bonus</div>
+                          <div className="text-xl font-black font-mono text-emerald-700">
+                            +${summary.commitmentEvaluation.bonusAwarded.toLocaleString()}
+                          </div>
+                        </div>
+
+                        {/* Next Sprint Capacity Adjustment */}
+                        <div className="text-right pl-3 border-l-2 border-emerald-300">
+                          <div className="text-[10px] uppercase font-bold text-slate-500">Next Sprint Capacity</div>
+                          <div className="text-xl font-black font-mono text-sky-700 flex items-center justify-end gap-1">
+                            <span>+{summary.commitmentEvaluation.capacityAdjustment} pts</span>
+                            <span className="text-xs text-slate-500 font-normal">({summary.commitmentEvaluation.nextSprintCapacity} total)</span>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ) : summary.commitmentEvaluation.underDeliveredPoints > 0 ? (
+                    <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-xs text-amber-900 flex items-center gap-2 font-medium">
+                      <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                      <span>
+                        Under-delivery carried over {summary.commitmentEvaluation.underDeliveredPoints} points. Next sprint capacity is maintained at <strong>{summary.commitmentEvaluation.nextSprintCapacity} pts</strong> to protect pipeline balance.
+                      </span>
+                    </div>
+                  ) : null}
+
+                  {/* Evaluation Commentary */}
+                  <div className="p-3 rounded-xl bg-[#F4F6F9] border border-slate-300 text-xs text-slate-700 font-medium leading-relaxed">
+                    <strong className="text-[#1E222A] font-bold">Agile Commitment Assessment: </strong>
+                    {summary.commitmentEvaluation.evaluationNotes}
+                  </div>
+                </div>
+              )}
+
               {/* Little's Law In-Depth Simulation Equation Card */}
               <div className="p-4 rounded-2xl bg-[#FFD200]/20 border-2 border-[#FFD200] space-y-3 shadow-[0_2px_0_#1E222A]">
                 <div className="flex items-center justify-between">
@@ -322,6 +475,17 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                         <span>Ferry Cargo Delivery Bonus:</span>
                         <span className="font-bold text-emerald-700">+${summary.financialSettlement.ferryDeliveryBonus.toLocaleString()}</span>
                       </div>
+                      {summary.financialSettlement.overDeliveryBonus && summary.financialSettlement.overDeliveryBonus > 0 ? (
+                        <div className="flex justify-between text-slate-700 bg-emerald-100/80 px-1.5 py-0.5 rounded border border-emerald-300">
+                          <span className="text-emerald-950 font-bold flex items-center gap-1">
+                            <Sparkles className="w-3 h-3 text-[#FFD200] fill-current" />
+                            Over-Delivery Cash Bonus:
+                          </span>
+                          <span className="font-black text-emerald-800">
+                            +${summary.financialSettlement.overDeliveryBonus.toLocaleString()}
+                          </span>
+                        </div>
+                      ) : null}
                       <div className="flex justify-between border-t border-emerald-200 pt-1 font-black text-emerald-950 text-sm">
                         <span>Gross Revenue:</span>
                         <span>+${summary.financialSettlement.totalGrossRevenue.toLocaleString()}</span>

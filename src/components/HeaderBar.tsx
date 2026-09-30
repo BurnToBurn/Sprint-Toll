@@ -9,7 +9,6 @@ import {
   Ship,
   BarChart3,
   PlusCircle,
-  Clock,
   ClipboardList,
   TrendingUp,
   Columns3,
@@ -61,10 +60,10 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   totalPoints,
   ferryPoints,
   ferryCapacity,
-  dayNumber,
+  dayNumber: _dayNumber,
   dayTimeFormatted,
-  sprintTimer,
-  ferryState,
+  sprintTimer: _sprintTimer,
+  ferryState: _ferryState,
   settings,
   activeTab,
   forecast,
@@ -88,11 +87,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   ferryReady,
   isRetroOpen = false
 }) => {
-  const secondsLeft = Math.ceil(sprintTimer);
-  const formattedCountdown = `00:${String(secondsLeft).padStart(2, '0')}`;
-  const isFull = ferryPoints >= ferryCapacity;
-  const isUrgent = (sprintTimer <= 10 || isFull) && ferryState === 'boarding';
-
   return (
     <header className="flex flex-wrap items-center justify-between px-4 sm:px-6 py-3.5 bg-[#2B2F38] border-b-[3px] border-[#1E222A] text-[#F4F6F9] shrink-0 select-none gap-3 sm:gap-4 shadow-[0_4px_0_#1E222A]">
       {/* Zone 1: Brand Wordmark with Playful Safety Yellow Construction Badge */}
@@ -209,42 +203,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
       {/* Zone 3: Resources & Primary Controls */}
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* Daily Cycle Countdown in Header */}
-        <div
-          className={`hidden sm:flex items-center gap-2 px-3.5 py-2 rounded-2xl border-[2.5px] border-[#1E222A] font-mono text-xs font-bold shadow-[0_3px_0_#1E222A] ${
-            isRetroOpen
-              ? 'bg-[#E85D04] text-white animate-pulse'
-              : isUrgent
-              ? 'bg-[#D92525] text-white animate-pulse'
-              : 'bg-[#F4F6F9] text-[#1E222A]'
-          }`}
-          title={isRetroOpen ? 'All simulation actions paused while Sprint Retrospective is active' : 'Ferry leaves when FULL or when timer runs out at 05:00 PM'}
-        >
-          {isRetroOpen ? (
-            <>
-              <span className="font-extrabold text-[#FFD200]">Day {dayNumber} Retro</span>
-              <span className="text-white/60">·</span>
-              <Pause className="w-4 h-4 text-[#FFD200]" />
-              <span className="tabular-nums font-black tracking-wide">ACTIONS PAUSED</span>
-            </>
-          ) : (
-            <>
-              <span className="font-extrabold text-[#48A2D8]">Day {dayNumber}</span>
-              <span className="text-slate-400">·</span>
-              <span>{dayTimeFormatted}</span>
-              <span className="text-slate-400">·</span>
-              <Clock className={`w-4 h-4 ${isUrgent ? 'text-white animate-spin' : 'text-[#E85D04]'}`} />
-              <span className="tabular-nums font-black">
-                {ferryState === 'boarding'
-                  ? isFull
-                    ? 'FULL! CASTING OFF'
-                    : formattedCountdown
-                  : 'In Transit'}
-              </span>
-            </>
-          )}
-        </div>
-
         {/* Funds & Pending Accruals Counter with High-Visibility Safety Yellow */}
         <div className="flex items-center gap-2 text-xs">
           <div

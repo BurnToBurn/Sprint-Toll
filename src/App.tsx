@@ -213,6 +213,7 @@ export default function App() {
             onAwardBonus={(amount) => {
               addFunds(amount);
             }}
+            onClose={() => setActiveTab('simulation')}
           />
         )}
       </main>

@@ -11,7 +11,6 @@ import {
   Sparkles,
   Award,
   Clock,
-  TrendingUp,
   Scissors,
   CheckCircle2,
   AlertTriangle,
@@ -301,32 +300,6 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                   )}
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Little's Law Operational Banner */}
-          <div className="mt-6 p-4 rounded-2xl bg-white border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A] flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-[#48A2D8] border-2 border-[#1E222A] flex items-center justify-center text-white shadow-[0_2px_0_#1E222A]">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-mono font-black uppercase text-slate-500 tracking-wider">
-                    Guiding Physics
-                  </span>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#FFD200] border border-[#1E222A] text-[#1E222A] font-black">
-                    Little's Law
-                  </span>
-                </div>
-                <div className="text-sm font-black text-[#1E222A] mt-0.5" style={{ fontFamily: 'var(--font-heading)' }}>
-                  Lead Time = Work in Progress (WIP) &divide; Throughput Rate
-                </div>
-              </div>
-            </div>
-
-            <div className="text-xs text-slate-600 font-semibold max-w-sm text-center sm:text-right">
-              Lower Work-In-Progress limits keep vehicles moving swiftly through toll lanes, driving down cycle times and eliminating gridlock!
             </div>
           </div>
 

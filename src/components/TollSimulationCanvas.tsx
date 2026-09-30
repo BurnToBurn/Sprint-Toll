@@ -20,7 +20,6 @@ import {
   ShieldAlert,
   Flame,
   Info,
-  Wrench,
   ClipboardList
 } from 'lucide-react';
 import { FlowEfficiencyViolationModal } from './FlowEfficiencyViolationModal';
@@ -64,7 +63,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   onSliceStory,
   onUnlockBooth,
   onSpawnStory,
-  onLaunchFerry,
+  onLaunchFerry: _onLaunchFerry,
   onUpgradeEfficiency,
   onUpgradeAutomation,
   onSetLaneWipLimit,
@@ -76,7 +75,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   onResolveIncident,
   onDispatchFromParkingLot,
   onOpenSprintPlanning,
-  onOpenUpgrades,
+  onOpenUpgrades: _onOpenUpgrades,
   onStageStoryInParkingLot
 }) => {
   const [hoveredVehicle, setHoveredVehicle] = useState<VehicleStory | null>(null);
@@ -116,7 +115,6 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   // Daily cycle timing & departure rule calculations
   const secondsLeft = Math.ceil(ferry.sprintTimer);
   const formattedCountdown = `00:${String(secondsLeft).padStart(2, '0')}`;
-  const dayProgressPercent = Math.min(100, Math.max(0, (1 - ferry.sprintTimer / ferry.sprintDuration) * 100));
   const isFull = ferry.currentPoints >= ferry.capacity;
   const isUrgent = (ferry.sprintTimer <= 10 || isFull) && ferry.state === 'boarding';
 
@@ -196,20 +194,6 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               {ferry.dayPhase === 'departure' && <Ship className="w-4 h-4 text-[#FFD200] animate-bounce" />}
               {ferry.dayTimeFormatted}
             </span>
-          </div>
-
-          {/* Work Shift Timeline Bar */}
-          <div className="hidden lg:flex items-center gap-2 text-[11px] text-slate-300 font-mono font-bold">
-            <span>09:00 AM</span>
-            <div className="w-28 sm:w-40 h-3 bg-[#1E222A] rounded-full overflow-hidden border-2 border-[#1E222A] p-0.5 shadow-inner">
-              <div
-                className={`h-full rounded-full transition-all duration-200 ${
-                  isUrgent ? 'bg-[#FFD200]' : 'bg-gradient-to-r from-[#48A2D8] via-[#FFD200] to-[#E85D04]'
-                }`}
-                style={{ width: `${dayProgressPercent}%` }}
-              />
-            </div>
-            <span>05:00 PM Release</span>
           </div>
         </div>
 
@@ -1629,17 +1613,6 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             </button>
           )}
 
-          {onOpenUpgrades && (
-            <button
-              onClick={onOpenUpgrades}
-              className="px-3.5 py-1.5 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] border-2 border-[#1E222A] transition-all flex items-center gap-1.5 font-mono font-black text-xs cursor-pointer shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
-              title="Open Harbor Works & Upgrades: Upgrade toll booths, efficiency, automation, and ferry vessel"
-            >
-              <Wrench className="w-4 h-4 text-[#1E222A]" />
-              <span>Upgrades</span>
-            </button>
-          )}
-
           {stagedVehicles.length > 0 && onDispatchFromParkingLot && (
             <button
               onClick={onDispatchFromParkingLot}
@@ -1666,26 +1639,12 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
           )}
         </div>
 
-        {/* Quick Instructions & Ferry Trigger */}
+        {/* Quick Instructions */}
         <div className="flex items-center gap-4">
           <div className="text-slate-300 text-[11px] font-semibold hidden md:flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-[#FFD200] border border-[#1E222A]" />
             <span>Click any vehicle to inspect or slice epics</span>
           </div>
-
-          <button
-            onClick={onLaunchFerry}
-            disabled={ferry.currentPoints === 0 || ferry.state !== 'boarding'}
-            className={`px-4 py-1.5 font-black rounded-xl transition-all flex items-center gap-2 border-2 border-[#1E222A] text-xs ${
-              ferry.currentPoints > 0 && ferry.state === 'boarding'
-                ? 'bg-[#D92525] hover:bg-[#E83C3C] text-white shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer'
-                : 'bg-slate-700 text-slate-400 opacity-60 cursor-not-allowed'
-            }`}
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            Deploy Ferry
-            <ArrowRight className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 

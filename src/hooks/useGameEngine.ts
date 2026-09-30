@@ -12,7 +12,8 @@ import {
   StoryPoint,
   LaneSpecialization,
   DayPhase,
-  BacklogItem
+  BacklogItem,
+  ParkingLotCommitmentEvaluation
 } from '../types/game';
 import { ScenarioDefinition, ActiveScenarioState } from '../types/scenarios';
 import { PREDETERMINED_SCENARIOS } from '../data/scenarios';
@@ -355,6 +356,17 @@ export function useGameEngine() {
 
   // Refs for loop state to avoid closure staleness
   const lastCountdownSecondRef = useRef<number>(-1);
+
+  // Parking lot sprint commitment tracking (points & story count committed during planning)
+  const [committedParkingLotStats, setCommittedParkingLotStats] = useState<{ points: number; count: number }>(() => {
+    const initialBatch = preSelectOptimalBatch(generateDailyBacklog(1), INITIAL_FERRY.capacity);
+    const sel = initialBatch.filter((b) => b.selected);
+    return {
+      points: sel.reduce((sum, item) => sum + item.points, 0),
+      count: sel.length
+    };
+  });
+
   const stateRef = useRef({
     funds,
     pendingDailyRevenue,
@@ -365,6 +377,7 @@ export function useGameEngine() {
     isMainMenuOpen: true,
     isSprintPlanningOpen: false,
     hasStartedGame: false,
+    committedParkingLotStats: { points: 30, count: 6 },
     sprintSummary: null as SprintSummary | null,
     activeScenario: null as ActiveScenarioState | null,
     activeScenarioDef: null as ScenarioDefinition | null,
@@ -388,7 +401,8 @@ export function useGameEngine() {
     stateRef.current.isMainMenuOpen = isMainMenuOpen;
     stateRef.current.isSprintPlanningOpen = isSprintPlanningOpen;
     stateRef.current.hasStartedGame = hasStartedGame;
-  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, isSprintPlanningOpen, hasStartedGame]);
+    stateRef.current.committedParkingLotStats = committedParkingLotStats;
+  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, isSprintPlanningOpen, hasStartedGame, committedParkingLotStats]);
 
   // Synchronize season changes to localStorage and ferry state
   useEffect(() => {
@@ -778,6 +792,12 @@ export function useGameEngine() {
 
     sound.playSprintCommit();
 
+    // Track what was committed in the parking lot for this sprint
+    const committedPts = selected.reduce((sum, item) => sum + item.points, 0);
+    const committedCount = selected.length;
+    setCommittedParkingLotStats({ points: committedPts, count: committedCount });
+    stateRef.current.committedParkingLotStats = { points: committedPts, count: committedCount };
+
     // Map selected backlog items into staged vehicles across North and South bays flanking the street
     let slotIndex = 0;
     const stagedVehicles: VehicleStory[] = selected.map((item) => {
@@ -1022,11 +1042,77 @@ export function useGameEngine() {
       keyHighlights.push(`⏳ ${leftBehindCount} tickets (${leftBehindPoints} pts) carried over to Day #${currentFerry.dayNumber + 1}`);
     }
 
+    // Parking Lot Commitment vs Delivery Evaluation
+    const committedStats = stateRef.current.committedParkingLotStats || { points: 30, count: 6 };
+    const committedPoints = Math.max(1, committedStats.points);
+    const committedStoriesCount = committedStats.count;
+
+    const overDeliveredPoints = Math.max(0, deliveredPoints - committedPoints);
+    const underDeliveredPoints = Math.max(0, committedPoints - deliveredPoints);
+    const completionRate = Math.round((deliveredPoints / committedPoints) * 100);
+
+    // Over-delivery cash bonus: $35 per story point delivered over parking lot commitment
+    const bonusPerOverPoint = 35;
+    const overDeliveryBonus = overDeliveredPoints * bonusPerOverPoint;
+
+    // Capacity adjustment for next sprint:
+    // Scale capacity boost based on how many points were delivered over commitment
+    let capacityAdjustment = 0;
+    if (overDeliveredPoints >= 10) {
+      capacityAdjustment = 12;
+    } else if (overDeliveredPoints >= 6) {
+      capacityAdjustment = 8;
+    } else if (overDeliveredPoints >= 3) {
+      capacityAdjustment = 5;
+    } else if (overDeliveredPoints >= 1) {
+      capacityAdjustment = 2;
+    }
+
+    const currentCapacity = currentFerry.capacity;
+    const nextSprintCapacity = Math.min(100, currentCapacity + capacityAdjustment);
+
+    let evaluationStatus: ParkingLotCommitmentEvaluation['evaluationStatus'] = 'exact_match';
+    let evaluationNotes = '';
+
+    if (overDeliveredPoints > 0) {
+      evaluationStatus = 'over_delivered';
+      evaluationNotes = `Supercharged Velocity! Delivered ${deliveredPoints} pts vs ${committedPoints} pts committed in the parking lot (+${overDeliveredPoints} pts over commitment, ${completionRate}% execution). Earned +$${overDeliveryBonus.toLocaleString()} over-delivery bonus, and calibrated next sprint capacity by +${capacityAdjustment} pts (from ${currentCapacity} → ${nextSprintCapacity} pts)!`;
+    } else if (underDeliveredPoints > 0) {
+      evaluationStatus = 'under_delivered';
+      evaluationNotes = `Delivered ${deliveredPoints} of ${committedPoints} committed pts (${completionRate}% execution). ${underDeliveredPoints} points remained in the highway queue or parking bays. Next sprint capacity maintained at ${currentCapacity} pts to protect Little's Law lead time.`;
+    } else {
+      evaluationStatus = 'exact_match';
+      evaluationNotes = `Precision Batch Delivery! Delivered exactly 100% of committed parking lot stories (${deliveredPoints}/${committedPoints} pts) with perfect predictability and flow consistency!`;
+    }
+
+    const commitmentEvaluation: ParkingLotCommitmentEvaluation = {
+      committedPoints,
+      committedStoriesCount,
+      deliveredPoints,
+      deliveredStoriesCount: deliveredVehicles.length,
+      overDeliveredPoints,
+      underDeliveredPoints,
+      completionRate,
+      evaluationStatus,
+      bonusAwarded: overDeliveryBonus,
+      capacityAdjustment,
+      nextSprintCapacity,
+      evaluationNotes
+    };
+
+    if (overDeliveredPoints > 0) {
+      keyHighlights.push(`🎯 Parking Lot Evaluation: Shipped +${overDeliveredPoints} pts over commitment (${completionRate}% execution) -> Earned +$${overDeliveryBonus.toLocaleString()} bonus & +${capacityAdjustment} pts next sprint capacity!`);
+    } else if (deliveredPoints === committedPoints) {
+      keyHighlights.push(`🎯 Parking Lot Evaluation: Exact 100% commitment match (${deliveredPoints}/${committedPoints} pts delivered) -> Flawless sprint estimation accuracy!`);
+    } else {
+      keyHighlights.push(`🎯 Parking Lot Evaluation: Delivered ${deliveredPoints} of ${committedPoints} committed pts (${completionRate}% execution) with ${underDeliveredPoints} pts carryover`);
+    }
+
     // Daily Fiscal Settlement: Player only receives funding at the end of each day
     // Daily dues include paying tax on higher efficiency booths and upgrades
     const grossTollRevenue = stateRef.current.pendingDailyRevenue;
     const ferryDeliveryBonus = sprintBonusRevenue;
-    const totalGrossRevenue = grossTollRevenue + ferryDeliveryBonus;
+    const totalGrossRevenue = grossTollRevenue + ferryDeliveryBonus + overDeliveryBonus;
 
     const dues = calculateDailyDues(stateRef.current.booths, currentFerry);
     const netFundingAwarded = Math.max(0, totalGrossRevenue - dues.totalDailyDues);
@@ -1034,6 +1120,7 @@ export function useGameEngine() {
     const financialSettlement: DailyFinancialSettlement = {
       grossTollRevenue,
       ferryDeliveryBonus,
+      overDeliveryBonus,
       totalGrossRevenue,
       efficiencyTax: dues.efficiencyTax,
       automationDues: dues.automationDues,
@@ -1111,6 +1198,7 @@ export function useGameEngine() {
       grade,
       departureReason: reason,
       financialSettlement,
+      commitmentEvaluation,
       bottleneckLaneName: bottleneckBooth.name,
       bottleneckQueueCount: maxLaneQueue,
       largestStoryProcessed,
@@ -1128,9 +1216,10 @@ export function useGameEngine() {
     setSprintSummary(summary);
     setLastSprintSummary(summary);
 
-    // Update ferry state to departing
+    // Update ferry state to departing and calibrate capacity for upcoming sprint
     setFerry((prev) => ({
       ...prev,
+      capacity: nextSprintCapacity,
       state: 'departing',
       sailProgress: 0
     }));
@@ -2390,6 +2479,13 @@ export function useGameEngine() {
     }
     const freshScenarioBatch = preSelectOptimalBatch(scenarioBacklog, resetFerry.capacity);
     setBacklogItems(freshScenarioBatch);
+    const selScen = freshScenarioBatch.filter((b) => b.selected);
+    const initialScenCommitted = {
+      points: selScen.reduce((sum, i) => sum + i.points, 0),
+      count: selScen.length
+    };
+    setCommittedParkingLotStats(initialScenCommitted);
+    stateRef.current.committedParkingLotStats = initialScenCommitted;
 
     setIsScenarioSelectOpen(false);
     setIsScenarioOutcomeOpen(false);
@@ -2516,6 +2612,13 @@ export function useGameEngine() {
 
     const freshBacklog = preSelectOptimalBatch(generateDailyBacklog(1), INITIAL_FERRY.capacity);
     setBacklogItems(freshBacklog);
+    const sel = freshBacklog.filter((b) => b.selected);
+    const initialCommitted = {
+      points: sel.reduce((sum, i) => sum + i.points, 0),
+      count: sel.length
+    };
+    setCommittedParkingLotStats(initialCommitted);
+    stateRef.current.committedParkingLotStats = initialCommitted;
 
     setHasStartedGame(true);
     setIsMainMenuOpen(false);
