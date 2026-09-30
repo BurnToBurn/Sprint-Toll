@@ -100,6 +100,8 @@ export default function App() {
     setSelectedVehicle,
     setSelectedBoothId,
     setSprintSummary,
+    closeSprintRetrospective,
+    acceptRetroAndStartNextDay,
     openLastRetrospective
   } = useGameEngine();
 
@@ -120,6 +122,14 @@ export default function App() {
       funds >= Math.round(200 * Math.pow(1.8, ferry.amenitiesLevel))
     );
   }, [booths, ferry, funds]);
+
+  // Active parking lot list: once a story vehicle is on the road, it is no longer in the parking lot list
+  const activeParkingLotBacklog = useMemo(() => {
+    const roadVehicleIds = new Set(
+      vehicles.filter((v) => v.state !== 'staged').map((v) => v.id)
+    );
+    return backlogItems.filter((item) => !roadVehicleIds.has(item.id));
+  }, [backlogItems, vehicles]);
 
   return (
     <div className="min-h-screen bg-[#2B2F38] text-[#F4F6F9] flex flex-col font-sans selection:bg-[#FFD200] selection:text-[#1E222A]">
@@ -260,7 +270,7 @@ export default function App() {
         dayNumber={ferry.dayNumber}
         ferry={ferry}
         booths={booths}
-        backlogItems={backlogItems}
+        backlogItems={activeParkingLotBacklog}
         onToggleItem={toggleBacklogItem}
         onAutoSelect={autoSelectOptimalBatch}
         onSliceItem={sliceBacklogItem}
@@ -282,7 +292,8 @@ export default function App() {
 
       <SprintRetrospectiveModal
         summary={sprintSummary}
-        onClose={() => setSprintSummary(null)}
+        onClose={closeSprintRetrospective}
+        onAcceptAndStartNextDay={acceptRetroAndStartNextDay}
       />
 
       <DailyForecastModal

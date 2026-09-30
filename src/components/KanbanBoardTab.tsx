@@ -550,7 +550,7 @@ export const KanbanBoardTab: React.FC<KanbanBoardTabProps> = ({
             </div>
 
             <button
-              onClick={onLaunchFerry}
+              onClick={() => onLaunchFerry()}
               disabled={ferry.currentPoints === 0 || ferry.state !== 'boarding'}
               className={`w-full py-2 px-3 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all border-2 border-[#1E222A] ${
                 ferry.currentPoints > 0 && ferry.state === 'boarding'

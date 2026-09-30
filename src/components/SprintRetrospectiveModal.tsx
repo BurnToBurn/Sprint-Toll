@@ -21,21 +21,34 @@ import {
   Flag,
   Receipt,
   Pause,
-  Target
+  Target,
+  X
 } from 'lucide-react';
 
 interface SprintRetrospectiveModalProps {
   summary: SprintSummary | null;
   onClose: () => void;
+  onAcceptAndStartNextDay?: () => void;
 }
 
-export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> = ({ summary, onClose }) => {
+export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> = ({ summary, onClose, onAcceptAndStartNextDay }) => {
   const [activeTab, setActiveTab] = useState<'highlights' | 'lessons' | 'kaizen'>('highlights');
   const [committedActions, setCommittedActions] = useState<Record<string, boolean>>({
     sliceLargeStories: true,
     enforceWip: true,
     upgradeBottleneck: false
   });
+
+  // Handle Escape key to close modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   useEffect(() => {
     if (summary) {
@@ -76,7 +89,16 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
   const deliveryRatio = totalStories > 0 ? Math.round((summary.deliveredVehiclesCount / totalStories) * 100) : 100;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E222A]/70 backdrop-blur-md animate-fadeIn">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#1E222A]/70 backdrop-blur-md animate-fadeIn"
+      onMouseDown={(e) => {
+        if (e.target === e.currentTarget) {
+          e.preventDefault();
+          e.stopPropagation();
+          onClose();
+        }
+      }}
+    >
       <div className="relative w-full max-w-3xl my-auto bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl shadow-[0_12px_0_#1E222A] text-[#1E222A] overflow-hidden flex flex-col max-h-[92vh]">
         <div className="rivet top-3 left-3" />
         <div className="rivet top-3 right-3" />
@@ -112,8 +134,8 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
               </div>
             </div>
 
-            {/* Sprint Grade Badge */}
-            <div className="flex items-center gap-2 self-end sm:self-auto">
+            {/* Sprint Grade Badge & Close 'X' Button */}
+            <div className="flex items-center gap-3 self-end sm:self-auto">
               <div
                 className={`flex flex-col items-center justify-center px-4 py-2 rounded-2xl border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A] ${
                   gradeColors[summary.grade] || gradeColors['B']
@@ -126,6 +148,20 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                   {summary.grade}
                 </div>
               </div>
+
+              {/* Close Button 'X' */}
+              <button
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  onClose();
+                }}
+                className="w-11 h-11 rounded-2xl bg-white hover:bg-slate-100 text-[#1E222A] border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-[0_1px_0_#1E222A] transition-all cursor-pointer group flex items-center justify-center shrink-0"
+                title="Close Report (Esc)"
+                aria-label="Close Retrospective Report"
+              >
+                <X className="w-5 h-5 group-hover:rotate-90 transition-transform duration-200" />
+              </button>
             </div>
           </div>
 
@@ -712,20 +748,31 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
         </div>
 
         {/* Modal Footer Action */}
-        <div className="px-6 py-4 border-t-2 border-[#1E222A] bg-white flex flex-col sm:flex-row items-center justify-between gap-3">
+        <div className="px-6 py-4 border-t-2 border-[#1E222A] bg-white flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0">
           <div className="flex items-center gap-2 text-xs text-slate-600 font-mono font-bold">
             <Flag className="w-3.5 h-3.5 text-[#48A2D8]" />
             <span>Next Cycle: Day #{summary.dayNumber + 1} Daily Sprint</span>
           </div>
 
-          <button
-            onClick={onClose}
-            className="w-full sm:w-auto py-2.5 px-6 bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 border-2 border-[#1E222A] shadow-[0_4px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
-            style={{ fontFamily: 'var(--font-heading)' }}
-          >
-            <span>Accept Retro &amp; Start Day #{summary.dayNumber + 1}</span>
-            <ArrowRight className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (onAcceptAndStartNextDay) {
+                  onAcceptAndStartNextDay();
+                } else {
+                  onClose();
+                }
+              }}
+              className="w-full sm:w-auto py-2.5 px-6 bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 border-2 border-[#1E222A] shadow-[0_4px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
+              style={{ fontFamily: 'var(--font-heading)' }}
+              title={`Accept retrospective and begin Day #${summary.dayNumber + 1}`}
+            >
+              <span>Accept &amp; Start Day #{summary.dayNumber + 1}</span>
+              <ArrowRight className="w-4 h-4" />
+            </button>
+          </div>
         </div>
       </div>
     </div>

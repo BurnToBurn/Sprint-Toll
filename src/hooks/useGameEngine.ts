@@ -84,13 +84,13 @@ const VEHICLE_CONFIGS: Record<StoryPoint, {
   speed: number;
   baseToll: number;
 }> = {
-  1: { color: '#EF4444', accentColor: '#B91C1C', length: 26, width: 16, baseTime: 1.2, speed: 2.0, baseToll: 12 },
-  2: { color: '#3B82F6', accentColor: '#1D4ED8', length: 34, width: 19, baseTime: 2.0, speed: 1.8, baseToll: 22 },
-  3: { color: '#10B981', accentColor: '#047857', length: 44, width: 22, baseTime: 3.2, speed: 1.6, baseToll: 35 },
-  5: { color: '#F59E0B', accentColor: '#B45309', length: 58, width: 24, baseTime: 5.0, speed: 1.4, baseToll: 60 },
-  8: { color: '#8B5CF6', accentColor: '#6D28D9', length: 74, width: 26, baseTime: 7.5, speed: 1.15, baseToll: 100 },
-  13: { color: '#EC4899', accentColor: '#BE185D', length: 94, width: 28, baseTime: 11.0, speed: 0.95, baseToll: 175 },
-  21: { color: '#E11D48', accentColor: '#9F1239', length: 118, width: 30, baseTime: 16.0, speed: 0.75, baseToll: 300 }
+  1: { color: '#EF4444', accentColor: '#B91C1C', length: 26, width: 16, baseTime: 1.2, speed: 1.8, baseToll: 12 },
+  2: { color: '#3B82F6', accentColor: '#1D4ED8', length: 34, width: 19, baseTime: 2.0, speed: 1.62, baseToll: 22 },
+  3: { color: '#10B981', accentColor: '#047857', length: 44, width: 22, baseTime: 3.2, speed: 1.44, baseToll: 35 },
+  5: { color: '#F59E0B', accentColor: '#B45309', length: 58, width: 24, baseTime: 5.0, speed: 1.26, baseToll: 60 },
+  8: { color: '#8B5CF6', accentColor: '#6D28D9', length: 74, width: 26, baseTime: 7.5, speed: 1.035, baseToll: 100 },
+  13: { color: '#EC4899', accentColor: '#BE185D', length: 94, width: 28, baseTime: 11.0, speed: 0.855, baseToll: 175 },
+  21: { color: '#E11D48', accentColor: '#9F1239', length: 118, width: 30, baseTime: 16.0, speed: 0.675, baseToll: 300 }
 };
 
 const INITIAL_BOOTHS: TollBooth[] = [
@@ -319,6 +319,7 @@ export function useGameEngine() {
   const [isSprintPlanningOpen, setIsSprintPlanningOpen] = useState<boolean>(false);
   const lastParkingReleaseTimeRef = useRef<number>(0);
   const timeSinceLastFlatTireRef = useRef<number>(0);
+  const preRetrospectiveSpeedRef = useRef<number>(1);
 
   // Main Menu State: starts on the main menu
   const [isMainMenuOpen, setIsMainMenuOpen] = useState<boolean>(true);
@@ -1040,6 +1041,9 @@ export function useGameEngine() {
       const lane = assignVehicleToLane(target, stateRef.current.booths, prev);
 
       sound.playClick();
+      // Once a story vehicle is on the road, it should no longer be in the parking lot list
+      setBacklogItems((prevItems) => prevItems.filter((item) => item.id !== target.id));
+
       return prev.map((v) => {
         if (v.id === target.id) {
           return {
@@ -1108,6 +1112,15 @@ export function useGameEngine() {
 
   const openSprintPlanning = useCallback(() => {
     sound.playClick();
+    // Once a story vehicle is on the road, it should no longer be in the parking lot list
+    const roadVehicleIds = new Set(
+      stateRef.current.vehicles
+        .filter((v) => v.state !== 'staged')
+        .map((v) => v.id)
+    );
+    if (roadVehicleIds.size > 0) {
+      setBacklogItems((prev) => prev.filter((item) => !roadVehicleIds.has(item.id)));
+    }
     setIsSprintPlanningOpen(true);
   }, []);
 
@@ -1156,21 +1169,33 @@ export function useGameEngine() {
   );
 
   // Deploy / Sail the Ferry
-  const launchFerry = useCallback((reason: 'full' | 'timer' | 'manual' = 'manual') => {
+  const launchFerry = useCallback((reasonParam?: any) => {
+    const reason: 'full' | 'timer' | 'manual' =
+      reasonParam === 'full' || reasonParam === 'timer' ? reasonParam : 'manual';
+
     if (stateRef.current.sprintSummary) return;
     const currentFerry = stateRef.current.ferry;
     if (currentFerry.state !== 'boarding' && currentFerry.state !== 'ready') return;
-    
+
+    // Explicitly pause the simulation when deploying or entering sprint retrospective
+    if (stateRef.current.settings.gameSpeed > 0) {
+      preRetrospectiveSpeedRef.current = stateRef.current.settings.gameSpeed;
+    }
+    stateRef.current.settings.gameSpeed = 0;
+    setSettings((prev) => ({ ...prev, gameSpeed: 0 }));
+
     // If no vehicles on board when timer expires, roll over to the next day
     if (currentFerry.vehiclesOnBoard.length === 0) {
-      setFerry((prev) => ({
-        ...prev,
-        dayNumber: prev.dayNumber + 1,
-        sprintNumber: prev.sprintNumber + 1,
+      const rolledFerry: FerryDock = {
+        ...currentFerry,
+        dayNumber: currentFerry.dayNumber + 1,
+        sprintNumber: currentFerry.sprintNumber + 1,
         dayPhase: 'morning',
         dayTimeFormatted: '09:00 AM',
-        sprintTimer: prev.sprintDuration
-      }));
+        sprintTimer: currentFerry.sprintDuration
+      };
+      stateRef.current.ferry = rolledFerry;
+      setFerry(rolledFerry);
       return;
     }
 
@@ -1435,18 +1460,96 @@ export function useGameEngine() {
     setSprintSummary(summary);
     setLastSprintSummary(summary);
 
-    // Update ferry state to departing and calibrate capacity for upcoming sprint
-    setFerry((prev) => ({
-      ...prev,
+    // Update ferry state to departing immediately in stateRef and state
+    const departingFerry: FerryDock = {
+      ...currentFerry,
       capacity: nextSprintCapacity,
       state: 'departing',
-      sailProgress: 0
-    }));
+      sailProgress: 0,
+      currentPoints: 0,
+      vehiclesOnBoard: []
+    };
+    stateRef.current.ferry = departingFerry;
+    setFerry(departingFerry);
 
-    // Mark vehicles as departed
-    setVehicles((prev) =>
-      prev.filter((v) => !deliveredVehicles.some((dv) => dv.id === v.id))
+    // Mark vehicles as departed immediately in stateRef and state, and
+    // if a story car has passed the toll but missed the ferry, stage it as a carryover in the parking lot!
+    const passedTollMissedFerry = stateRef.current.vehicles.filter(
+      (v) =>
+        !deliveredVehicles.some((dv) => dv.id === v.id) &&
+        (v.state === 'to_dock' || (v.x >= 120 && v.state !== 'staged' && v.state !== 'departed' && v.state !== 'on_ferry'))
     );
+
+    const existingStaged = stateRef.current.vehicles.filter(
+      (v) => v.state === 'staged' && !passedTollMissedFerry.some((p) => p.id === v.id)
+    );
+    const usedSlots = new Set(existingStaged.map((v) => v.parkingSlotIndex ?? 0));
+    let nextSlotCounter = 0;
+    const allocateSlot = () => {
+      while (usedSlots.has(nextSlotCounter) && nextSlotCounter < 12) {
+        nextSlotCounter++;
+      }
+      const chosen = nextSlotCounter < 12 ? nextSlotCounter : (nextSlotCounter % 12);
+      usedSlots.add(chosen);
+      return chosen;
+    };
+
+    const carryoverBacklogItems: BacklogItem[] = [];
+
+    const remainingVehicles: VehicleStory[] = stateRef.current.vehicles
+      .filter((v) => !deliveredVehicles.some((dv) => dv.id === v.id))
+      .map((v) => {
+        const isPassedMissed = passedTollMissedFerry.some((p) => p.id === v.id);
+        if (isPassedMissed) {
+          const slot = allocateSlot();
+          const isNorth = slot % 2 === 0;
+          const bayIndex = Math.floor(slot / 2);
+          const col = bayIndex % 3;
+          const row = Math.floor(bayIndex / 3);
+          const cleanTitle = v.title.replace(/^\[Carryover\]\s*/, '');
+          const carryoverTitle = `[Carryover] ${cleanTitle}`;
+
+          const updatedV: VehicleStory = {
+            ...v,
+            title: carryoverTitle,
+            state: 'staged',
+            isCarryover: true,
+            parkingSlotIndex: slot,
+            feederLane: isNorth ? 'north' : 'south',
+            laneIndex: -1,
+            x: -402 + col * 58,
+            y: isNorth ? 54 + row * 46 : 292 + row * 46
+          };
+
+          carryoverBacklogItems.push({
+            id: v.id,
+            title: carryoverTitle,
+            points: v.points,
+            type: v.type,
+            businessValue: Math.round(v.tollValue * 1.15),
+            priority: 'critical',
+            category: 'Core API',
+            description: `Passed toll booth but missed ferry departure. Staged as carryover in parking lot!`,
+            selected: true,
+            isCarryover: true
+          });
+
+          return updatedV;
+        }
+        return v;
+      });
+
+    stateRef.current.vehicles = remainingVehicles;
+    setVehicles(remainingVehicles);
+
+    if (carryoverBacklogItems.length > 0) {
+      setBacklogItems((prev) => {
+        const withoutOld = prev.filter(
+          (item) => !passedTollMissedFerry.some((p) => p.id === item.id)
+        );
+        return [...carryoverBacklogItems, ...withoutOld];
+      });
+    }
 
     // Evaluate Predetermined Tech Scenario Progress and Win/Lose Situations
     const currentActiveScenario = stateRef.current.activeScenario;
@@ -1602,26 +1705,12 @@ export function useGameEngine() {
     const { booths: currBooths, ferry: currFerry, vehicles: currVehicles, settings: currSettings } = stateRef.current;
     const now = Date.now();
     let workingVehicles: VehicleStory[] = [...currVehicles];
-
-    // 1. Automatic Vehicle Spawner & Continual Flow of Traffic
     const isContinualFlow = currSettings.continuousFlowMode;
-    const scenarioSpawnMult = stateRef.current.activeScenarioDef?.spawnRateMultiplier || 1.0;
-    const baseSpawnInterval = isContinualFlow ? 1600 : 4200;
-    const spawnInterval = Math.round(baseSpawnInterval / scenarioSpawnMult); // ms between spawns
-    const maxAllowedVehicles = isContinualFlow ? 40 : 26;
 
-    // 1b. Staged Parking Lot Vehicles: automatically roll out sprint stories from North & South bays to the tolls
+    // 1. Staged Parking Lot Vehicles: roll out committed sprint stories from North & South bays to the tolls
     const stagedVehicles = workingVehicles.filter((v) => v.state === 'staged');
 
-    // Only spawn automatic random background traffic when NO staged sprint stories remain!
-    if (stagedVehicles.length === 0 && currFerry.dayPhase !== 'planning' && now - stateRef.current.lastSpawnTime > spawnInterval) {
-      stateRef.current.lastSpawnTime = now;
-      if (workingVehicles.length < maxAllowedVehicles) {
-        const spawned = createSpawnedVehicle(undefined, undefined, workingVehicles);
-        if (spawned) workingVehicles.push(spawned);
-      }
-    }
-
+    // Once the parking lot is empty, stop the flow of stories (all sprint commitments have been dispatched)
     if (stagedVehicles.length > 0 && currFerry.dayPhase !== 'planning') {
       const timeSinceLastParkingRelease = now - lastParkingReleaseTimeRef.current;
       // Smooth, steady rollout so stories from sprint planning immediately flow over to the tolls!
@@ -1676,6 +1765,9 @@ export function useGameEngine() {
           }
           return v;
         });
+
+        // Once a story vehicle is on the road, it should no longer be in the parking lot list
+        setBacklogItems((prev) => prev.filter((item) => item.id !== nextVehicle.id));
       }
     }
 
@@ -1728,22 +1820,6 @@ export function useGameEngine() {
           }
         }
       });
-    }
-
-    // Continual Flow Starvation Prevention: If an unlocked booth has 0 incoming vehicles, feed it immediately!
-    if (isContinualFlow && workingVehicles.length < maxAllowedVehicles && now - stateRef.current.lastSpawnTime > 800) {
-      const activeBooths = currBooths.filter((b) => b.unlocked);
-      for (const b of activeBooths) {
-        const laneLoad = workingVehicles.filter(
-          (v) => v.laneIndex === b.id && (v.state === 'approaching' || v.state === 'queued' || v.state === 'processing')
-        ).length;
-        if (laneLoad === 0) {
-          stateRef.current.lastSpawnTime = now;
-          const spawned = createSpawnedVehicle(undefined, b.id, workingVehicles);
-          if (spawned) workingVehicles.push(spawned);
-          break;
-        }
-      }
     }
 
     // 2. Ferry Departure Conditions: Leaves when FULL OR when TIMER RUNS OUT
@@ -2238,7 +2314,7 @@ export function useGameEngine() {
           const dist = maxDockX - v.x;
           if (dist > 0) {
             const speedScale = Math.min(1, Math.max(0.2, dist / 25));
-            v.x = Math.min(maxDockX, v.x + (v.speed + 0.8) * dt * 34 * speedScale);
+            v.x = Math.min(maxDockX, v.x + (v.speed + 0.72) * dt * 30.6 * speedScale);
           }
 
           // Reach Ferry Dock ramp (around X = 465)
@@ -2269,7 +2345,7 @@ export function useGameEngine() {
             v.x = dockStopX;
           } else {
             const speedScale = Math.min(1, Math.max(0.18, dist / 25));
-            v.x = Math.min(dockStopX, v.x + (v.speed + 0.8) * dt * 34 * speedScale);
+            v.x = Math.min(dockStopX, v.x + (v.speed + 0.72) * dt * 30.6 * speedScale);
           }
         }
       }
@@ -2514,8 +2590,8 @@ export function useGameEngine() {
 
   // Settings: change game speed
   const setGameSpeed = useCallback((speed: number) => {
-    if (stateRef.current.sprintSummary) return;
     sound.playClick();
+    stateRef.current.settings.gameSpeed = speed;
     setSettings((s) => ({ ...s, gameSpeed: speed }));
   }, []);
 
@@ -2547,19 +2623,59 @@ export function useGameEngine() {
   }, []);
 
   // Dismiss or set sprint retrospective report with stateRef synchronization
-  const updateSprintSummary = useCallback((summary: SprintSummary | null) => {
+  const updateSprintSummary = useCallback((summaryArg: any) => {
+    const summary: SprintSummary | null =
+      summaryArg && typeof summaryArg === 'object' && 'sprintNumber' in summaryArg
+        ? (summaryArg as SprintSummary)
+        : null;
+
     stateRef.current.sprintSummary = summary;
     if (!summary) {
       stateRef.current.lastSpawnTime = Date.now();
       lastParkingReleaseTimeRef.current = Date.now();
+    } else {
+      // Whenever a retrospective is open, pause simulation actions and motion
+      if (stateRef.current.settings.gameSpeed > 0) {
+        preRetrospectiveSpeedRef.current = stateRef.current.settings.gameSpeed;
+      }
+      stateRef.current.settings.gameSpeed = 0;
+      setSettings((prev) => ({ ...prev, gameSpeed: 0 }));
     }
     setSprintSummary(summary);
+  }, []);
+
+  // Close retrospective report and keep simulation paused so player can safely inspect and plan
+  const closeSprintRetrospective = useCallback(() => {
+    sound.playClick();
+    stateRef.current.sprintSummary = null;
+    stateRef.current.lastSpawnTime = Date.now();
+    lastParkingReleaseTimeRef.current = Date.now();
+    setSprintSummary(null);
+  }, []);
+
+  // Accept retrospective and start next day, resuming the simulation
+  const acceptRetroAndStartNextDay = useCallback(() => {
+    sound.playClick();
+    stateRef.current.sprintSummary = null;
+    stateRef.current.lastSpawnTime = Date.now();
+    lastParkingReleaseTimeRef.current = Date.now();
+    setSprintSummary(null);
+
+    // Resume simulation at normal / previous speed to depart ferry and advance day
+    const resumeSpeed = preRetrospectiveSpeedRef.current > 0 ? preRetrospectiveSpeedRef.current : 1;
+    stateRef.current.settings.gameSpeed = resumeSpeed;
+    setSettings((prev) => ({ ...prev, gameSpeed: resumeSpeed }));
   }, []);
 
   // Open the most recent sprint retrospective report
   const openLastRetrospective = useCallback(() => {
     if (lastSprintSummary) {
       sound.playClick();
+      if (stateRef.current.settings.gameSpeed > 0) {
+        preRetrospectiveSpeedRef.current = stateRef.current.settings.gameSpeed;
+      }
+      stateRef.current.settings.gameSpeed = 0;
+      setSettings((prev) => ({ ...prev, gameSpeed: 0 }));
       updateSprintSummary(lastSprintSummary);
     }
   }, [lastSprintSummary, updateSprintSummary]);
@@ -3056,6 +3172,8 @@ export function useGameEngine() {
     setSelectedVehicle,
     setSelectedBoothId,
     setSprintSummary: updateSprintSummary,
+    closeSprintRetrospective,
+    acceptRetroAndStartNextDay,
     openLastRetrospective
   };
 }

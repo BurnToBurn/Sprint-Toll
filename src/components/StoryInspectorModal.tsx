@@ -55,10 +55,15 @@ export const StoryInspectorModal: React.FC<StoryInspectorModalProps> = ({
             {vehicle.points}
           </div>
           <div>
-            <div className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center gap-2 text-xs font-black text-slate-500 uppercase tracking-wider flex-wrap">
               <span>{vehicle.type} Story</span>
               <span aria-hidden="true">·</span>
               <span className="font-mono">{vehicle.points} Points</span>
+              {vehicle.isCarryover && (
+                <span className="px-2 py-0.5 rounded-lg bg-[#EF4444] text-white text-[10px] font-black uppercase font-mono tracking-wider animate-pulse border border-[#1E222A]">
+                  Carryover (Missed Ferry)
+                </span>
+              )}
             </div>
             <h3 className="text-base sm:text-lg font-black text-[#1E222A] mt-0.5 leading-snug" style={{ fontFamily: 'var(--font-heading)' }}>
               {vehicle.title}

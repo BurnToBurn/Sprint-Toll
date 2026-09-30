@@ -143,7 +143,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
 
         {hasLastRetrospective && onOpenRetrospective && (
           <button
-            onClick={onOpenRetrospective}
+            onClick={() => onOpenRetrospective()}
             className="px-3 py-2 text-xs font-black rounded-xl border-2 border-[#1E222A] bg-[#D92525] text-white hover:bg-[#E83C3C] transition-all flex items-center gap-1.5 whitespace-nowrap cursor-pointer shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
             style={{ fontFamily: 'var(--font-heading)' }}
             title="Review the latest Sprint Retrospective Report"
@@ -286,7 +286,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
         {/* Deploy Release Action */}
         <div className="flex items-center gap-2">
           <button
-            onClick={onLaunchFerry}
+            onClick={() => onLaunchFerry()}
             disabled={!ferryReady || isRetroOpen}
             className={`flex items-center gap-2 px-4 py-2 text-xs font-black rounded-2xl border-[2.5px] border-[#1E222A] transition-all whitespace-nowrap cursor-pointer ${
               ferryReady && !isRetroOpen

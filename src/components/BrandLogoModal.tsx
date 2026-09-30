@@ -71,7 +71,7 @@ export const BrandLogoModal: React.FC<BrandLogoModalProps> = ({ isOpen, onClose 
 
     const img = new Image();
     const svgBlob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
-    const URLObject = window.URL || window.webkitURL || window;
+    const URLObject = typeof window !== 'undefined' && window.URL ? window.URL : URL;
     const blobURL = URLObject.createObjectURL(svgBlob);
 
     img.onload = () => {

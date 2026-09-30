@@ -223,20 +223,20 @@ export function generateDailyBacklog(
   const items: BacklogItem[] = [];
   let nextId = 100 + (dayNumber - 1) * 20;
 
-  // 1. Add carryover stories from yesterday (marked with high priority & carryover flag, locked in parking lot)
+  // 1. Add carryover stories from yesterday (marked with high priority & carryover flag)
   carryoverVehicles.forEach((v) => {
+    const rawTitle = v.title.replace(/^\[Carryover\]\s*/, '');
     items.push({
-      id: `BL-${nextId++}`,
-      title: `[Carryover] ${v.title}`,
+      id: v.id || `BL-${nextId++}`,
+      title: `[Carryover] ${rawTitle}`,
       points: v.points,
       type: v.type,
       businessValue: Math.round(v.tollValue * 1.15), // carryover urgency bonus
       priority: 'critical',
       category: 'Core API',
-      description: `Carried over from Day #${dayNumber - 1}. Missed yesterday's ferry departure deadline! Locked in Parking Lot.`,
+      description: `Carried over from Day #${dayNumber - 1}. Missed ferry departure after passing toll!`,
       selected: true,
-      isCarryover: true,
-      isLocked: true // Locked in parking lot staging and cannot be removed
+      isCarryover: true
     });
   });
 

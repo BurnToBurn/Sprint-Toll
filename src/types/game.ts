@@ -28,6 +28,7 @@ export interface VehicleStory {
   hasChosenPlazaLane?: boolean; // True once vehicle evaluated shortest lane upon entering plaza
   hasFlatTire?: boolean; // True if vehicle currently suffered a blown tire
   flatTireRemaining?: number; // Seconds remaining until roadside tire service fixes it
+  isCarryover?: boolean; // True if vehicle passed toll but missed ferry and carried over to parking lot
 }
 
 export type BacklogPriority = 'critical' | 'high' | 'medium' | 'low';

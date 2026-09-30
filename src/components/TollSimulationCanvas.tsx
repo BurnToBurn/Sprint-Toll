@@ -1638,6 +1638,48 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                   />
                 )}
 
+                {/* Carryover Halo & Flag Tag */}
+                {v.isCarryover && (
+                  <>
+                    <rect
+                      x="-3"
+                      y="-3"
+                      width={v.length + 6}
+                      height={v.width + 6}
+                      rx={v.points >= 8 ? 5 : 7}
+                      fill="none"
+                      stroke="#ef4444"
+                      strokeWidth="2"
+                      strokeDasharray="3 2"
+                      className="animate-pulse"
+                    />
+                    <g transform={`translate(${Math.max(0, (v.length - 28) / 2)}, -7)`}>
+                      <rect
+                        x="0"
+                        y="0"
+                        width="28"
+                        height="8"
+                        rx="2.5"
+                        fill="#ef4444"
+                        stroke="#1E222A"
+                        strokeWidth="0.8"
+                      />
+                      <text
+                        x="14"
+                        y="6"
+                        fill="#ffffff"
+                        fontSize="5.5"
+                        fontWeight="black"
+                        textAnchor="middle"
+                        fontFamily="var(--font-mono)"
+                        letterSpacing="0.3"
+                      >
+                        CARRYOVER
+                      </text>
+                    </g>
+                  </>
+                )}
+
                 {/* Deflated tire blow indicator */}
                 {v.hasFlatTire && (
                   <text
@@ -1748,9 +1790,15 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
         {/* Left Side: Sprint Planning & Staged Backlog Actions */}
         <div className="flex items-center gap-2.5 flex-wrap">
           {/* Staged Parking Lot Counter & Sprint Planning */}
-          {stagedVehicles.length > 0 && (
-            <span className="px-3 py-1.5 rounded-xl bg-[#FFD200]/20 border border-[#FFD200]/40 text-[#FFD200] font-mono font-black text-xs">
-              🅿️ LOT: {stagedVehicles.length} ({stagedPoints} pts)
+          {stagedVehicles.length > 0 ? (
+            <span className="px-3 py-1.5 rounded-xl bg-[#FFD200]/20 border border-[#FFD200]/40 text-[#FFD200] font-mono font-black text-xs flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-[#FFD200] animate-pulse" />
+              <span>🅿️ LOT: {stagedVehicles.length} ({stagedPoints} pts)</span>
+            </span>
+          ) : (
+            <span className="px-3 py-1.5 rounded-xl bg-[#181c24] border border-[#334155] text-slate-300 font-mono font-bold text-xs flex items-center gap-1.5 shadow-sm" title="All committed sprint stories have rolled out of the parking lot. Flow of new stories has stopped.">
+              <span className="w-2 h-2 rounded-full bg-slate-500" />
+              <span>🅿️ LOT EMPTY · FLOW STOPPED</span>
             </span>
           )}
 
