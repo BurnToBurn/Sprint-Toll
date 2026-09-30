@@ -126,6 +126,11 @@ export const MainMenu: React.FC<MainMenuProps> = ({
   useEffect(() => {
     if (!isOpen) return;
 
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
+
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
 
@@ -152,7 +157,11 @@ export const MainMenu: React.FC<MainMenuProps> = ({
     };
 
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.documentElement.style.overflow = previousHtmlOverflow;
+      document.body.style.overflow = previousBodyOverflow;
+    };
   }, [isOpen, activeMenuTab, hasActiveGame, confirmRestartOpen, onResumeGame, onStartNewGame]);
 
   if (!isOpen) return null;
