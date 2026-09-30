@@ -318,6 +318,7 @@ export function useGameEngine() {
   );
   const [isSprintPlanningOpen, setIsSprintPlanningOpen] = useState<boolean>(false);
   const lastParkingReleaseTimeRef = useRef<number>(0);
+  const timeSinceLastFlatTireRef = useRef<number>(0);
 
   // Main Menu State: starts on the main menu
   const [isMainMenuOpen, setIsMainMenuOpen] = useState<boolean>(true);
@@ -468,7 +469,9 @@ export function useGameEngine() {
       targetY: 0,
       laneIndex: -1,
       state: 'approaching',
-      laneQueuePosition: -1
+      laneQueuePosition: -1,
+      hasFlatTire: false,
+      flatTireRemaining: 0
     };
   }, []);
 
@@ -508,8 +511,10 @@ export function useGameEngine() {
         const isFull = queueLength >= booth.wipLimit;
         const incidentPenalty = booth.incident ? 60 : 0;
         const fullPenalty = isFull ? 30 : 0;
+        const hasFlatTireVehicle = queue.some((v) => v.hasFlatTire);
+        const flatTirePenalty = hasFlatTireVehicle ? 150 : 0;
 
-        const score = queueLength * 10 + queuePoints + incidentPenalty + fullPenalty;
+        const score = queueLength * 10 + queuePoints + incidentPenalty + fullPenalty + flatTirePenalty;
 
         return {
           boothId: booth.id,
@@ -919,7 +924,7 @@ export function useGameEngine() {
     });
   }, [assignVehicleToLane]);
 
-  // Resolve a random incident / blocked lane event (flat tire, breakdown, etc.)
+  // Resolve a random booth incident / blocked lane event (gate jam, scanner crash, spill, etc.)
   const resolveBoothIncident = useCallback((boothId: number, useEmergencyFix: boolean = true) => {
     if (stateRef.current.sprintSummary) return;
     setBooths((prev) =>
@@ -939,6 +944,32 @@ export function useGameEngine() {
           incident: null,
           timeSinceLastIncident: 0
         };
+      })
+    );
+  }, []);
+
+  // Resolve a flat tire on a story vehicle (roadside assistance tire service)
+  const resolveVehicleFlatTire = useCallback((vehicleId: string, useEmergencyFix: boolean = true) => {
+    if (stateRef.current.sprintSummary) return;
+    const fixCost = 15;
+    if (useEmergencyFix && stateRef.current.funds < fixCost) {
+      sound.playHonk();
+      return;
+    }
+    if (useEmergencyFix) {
+      setFunds((f) => Math.max(0, f - fixCost));
+    }
+    sound.playRepair();
+    setVehicles((prev) =>
+      prev.map((v) => {
+        if (v.id === vehicleId && v.hasFlatTire) {
+          return {
+            ...v,
+            hasFlatTire: false,
+            flatTireRemaining: 0
+          };
+        }
+        return v;
       })
     );
   }, []);
@@ -1746,6 +1777,47 @@ export function useGameEngine() {
     // Process each toll booth
     const BOOTH_BARRIER_X = 245;
 
+    // Process Vehicle Flat Tires: flat tires only happen to story vehicles where they are at!
+    timeSinceLastFlatTireRef.current += dt;
+
+    // 1. Countdown active vehicle flat tires
+    updatedVehicles.forEach((v) => {
+      if (v.hasFlatTire) {
+        v.flatTireRemaining = Math.max(0, (v.flatTireRemaining || 0) - dt);
+        if (v.flatTireRemaining <= 0) {
+          v.hasFlatTire = false;
+          v.flatTireRemaining = 0;
+          sound.playRepair();
+        }
+      }
+    });
+
+    // 2. Trigger random flat tire on an active story vehicle where it currently is located on the roadway
+    const activeVehiclesOnRoad = updatedVehicles.filter(
+      (v) =>
+        (v.state === 'approaching' || v.state === 'queued' || v.state === 'processing') &&
+        !v.hasFlatTire &&
+        v.x > -180 &&
+        v.x < 410
+    );
+    const flatTireVehicleCount = updatedVehicles.filter((v) => v.hasFlatTire).length;
+
+    if (
+      timeSinceLastFlatTireRef.current > 30 &&
+      flatTireVehicleCount < 2 &&
+      activeVehiclesOnRoad.length > 0 &&
+      currFerry.dayPhase !== 'planning' &&
+      !stateRef.current.sprintSummary
+    ) {
+      if (Math.random() < dt * 0.035) {
+        const victim = activeVehiclesOnRoad[Math.floor(Math.random() * activeVehiclesOnRoad.length)];
+        victim.hasFlatTire = true;
+        victim.flatTireRemaining = 15;
+        timeSinceLastFlatTireRef.current = 0;
+        sound.playFlatTire();
+      }
+    }
+
     updatedBooths.forEach((booth) => {
       if (!booth.unlocked) return;
 
@@ -1754,7 +1826,7 @@ export function useGameEngine() {
         booth.cooldownTimer = Math.max(0, booth.cooldownTimer - dt);
       }
 
-      // Handle random booth incidents / breakdowns (flat tires, gate jams, etc.)
+      // Handle random booth infrastructure incidents (gate jams, scanner crashes, spills, power loss)
       if (booth.incident) {
         booth.incident.remaining = Math.max(0, booth.incident.remaining - dt);
         if (booth.incident.remaining <= 0) {
@@ -1795,13 +1867,14 @@ export function useGameEngine() {
         (v) => v.laneIndex === booth.id && v.state === 'to_dock' && v.x < BOOTH_BARRIER_X + 45
       );
 
-      // If booth is idle, cooldown complete, no active incident, and front vehicle has reached the barrier stop line
+      // If booth is idle, cooldown complete, no active incident, and front vehicle has reached the barrier stop line (and has NO flat tire)
       if (
         !booth.isProcessing &&
         booth.currentVehicleId === null &&
         booth.cooldownTimer <= 0 &&
         booth.incident === null &&
         frontVehicle &&
+        !frontVehicle.hasFlatTire &&
         !hasClearingCar
       ) {
         const stopLine = BOOTH_BARRIER_X - frontVehicle.length;
@@ -1823,8 +1896,14 @@ export function useGameEngine() {
         }
       }
 
-      // If booth is currently processing
-      if (booth.isProcessing && booth.processingDuration > 0 && !booth.incident) {
+      // If booth is currently processing (pauses if vehicle has an active flat tire)
+      const currentProcessingVehicle = updatedVehicles.find((v) => v.id === booth.currentVehicleId);
+      if (
+        booth.isProcessing &&
+        booth.processingDuration > 0 &&
+        !booth.incident &&
+        (!currentProcessingVehicle || !currentProcessingVehicle.hasFlatTire)
+      ) {
         const progressIncrement = (dt / booth.processingDuration) * 100;
         booth.processingProgress = Math.min(100, booth.processingProgress + progressIncrement);
 
@@ -1963,7 +2042,10 @@ export function useGameEngine() {
 
         // 3. Smooth, anti-jitter deceleration towards stopX
         const dist = stopX - v.x;
-        if (dist <= 0) {
+        if (v.hasFlatTire) {
+          // Immobilized on the spot where the flat tire happened!
+          v.state = 'queued';
+        } else if (dist <= 0) {
           v.x = stopX;
           v.state = 'queued';
         } else {
@@ -1999,7 +2081,9 @@ export function useGameEngine() {
       if (v.state === 'to_dock') {
         v.y = targetLaneY;
 
-        if (currFerry.state === 'boarding') {
+        if (v.hasFlatTire) {
+          // Immobilized at current exit location!
+        } else if (currFerry.state === 'boarding') {
           // Check car ahead in the same exit lane to prevent overtaking
           const aheadInLane = updatedVehicles.filter(
             (other) =>
@@ -2759,6 +2843,7 @@ export function useGameEngine() {
     commitSprintPlanning,
     dispatchNextFromParkingLot,
     resolveBoothIncident,
+    resolveVehicleFlatTire,
     // Scenario Engine
     activeScenario,
     activeScenarioDef,

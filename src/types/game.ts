@@ -26,6 +26,8 @@ export interface VehicleStory {
   parkingSlotIndex?: number; // 0, 1, 2... slot index in the sprint parking lot
   feederLane?: 'north' | 'south'; // North or South one-way feeder lane
   hasChosenPlazaLane?: boolean; // True once vehicle evaluated shortest lane upon entering plaza
+  hasFlatTire?: boolean; // True if vehicle currently suffered a blown tire
+  flatTireRemaining?: number; // Seconds remaining until roadside tire service fixes it
 }
 
 export type BacklogPriority = 'critical' | 'high' | 'medium' | 'low';
@@ -54,7 +56,7 @@ export interface SprintPlan {
 
 export type LaneSpecialization = 'all' | 'small_only' | 'standard' | 'heavy_only';
 
-export type IncidentType = 'flat_tire' | 'breakdown' | 'scanner_glitch' | 'spill_cleanup';
+export type IncidentType = 'breakdown' | 'scanner_glitch' | 'spill_cleanup' | 'power_loss';
 
 export interface BoothIncident {
   id: string;

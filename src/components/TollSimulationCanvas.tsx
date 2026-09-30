@@ -44,6 +44,7 @@ interface TollSimulationCanvasProps {
   onToggleContinuousFlow?: () => void;
   funds: number;
   onResolveIncident?: (boothId: number, emergency?: boolean) => void;
+  onResolveFlatTire?: (vehicleId: string, emergency?: boolean) => void;
   onDispatchFromParkingLot?: () => void;
   onOpenSprintPlanning?: () => void;
   onOpenUpgrades?: () => void;
@@ -73,6 +74,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   onToggleContinuousFlow,
   funds,
   onResolveIncident,
+  onResolveFlatTire,
   onDispatchFromParkingLot,
   onOpenSprintPlanning,
   onOpenUpgrades: _onOpenUpgrades,
@@ -122,6 +124,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   const stagedVehicles = React.useMemo(() => vehicles.filter((v) => v.state === 'staged'), [vehicles]);
   const stagedPoints = React.useMemo(() => stagedVehicles.reduce((sum, v) => sum + v.points, 0), [stagedVehicles]);
   const activeIncidents = React.useMemo(() => booths.filter((b) => b.unlocked && b.incident !== null), [booths]);
+  const flatTireVehicles = React.useMemo(() => vehicles.filter((v) => v.hasFlatTire), [vehicles]);
 
   // Identify significant bottleneck booth (only triggers after cars reach the toll gate)
   const primaryBottleneck = React.useMemo<{ booth: TollBooth; queue: VehicleStory[]; points: number } | null>(() => {
@@ -243,7 +246,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               <AlertTriangle className="w-4 h-4" />
             </div>
             <div className="truncate">
-              <strong className="text-[#FFD200]">ROADWAY OBSTRUCTION:</strong>{' '}
+              <strong className="text-[#FFD200]">BOOTH INFRASTRUCTURE ALERT:</strong>{' '}
               {activeIncidents.map((b) => `${b.name.split('·')[0]} (${b.incident?.title}, ${Math.ceil(b.incident?.remaining || 0)}s)`).join(' · ')}
             </div>
           </div>
@@ -255,6 +258,34 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                 className="px-2.5 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs border border-[#1E222A] shadow cursor-pointer transition-all active:translate-y-0.5"
               >
                 Clear {b.name.split('·')[0]} (${b.incident?.quickFixCost})
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Active Vehicle Flat Tires Alert Banner (Happens to vehicles on the roadway where they are at) */}
+      {flatTireVehicles.length > 0 && (
+        <div className="bg-[#EF4444] border-b-[2.5px] border-[#1E222A] px-4 py-2 flex items-center justify-between text-xs text-white z-10 shrink-0 shadow-lg animate-pulse">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="p-1 rounded-lg bg-[#1E222A] text-[#FBBF24] border border-black/30 shrink-0">
+              <span className="text-sm leading-none">🛞</span>
+            </div>
+            <div className="truncate">
+              <strong className="text-[#FBBF24]">STORY VEHICLE FLAT TIRE:</strong>{' '}
+              {flatTireVehicles.map((v) => `"${v.title}" (${Math.ceil(v.flatTireRemaining || 0)}s)`).join(' · ')}
+              <span className="opacity-90 hidden sm:inline ml-2 text-[11px]">— Immobilized on roadway where stopped, blocking following traffic!</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-3">
+            {flatTireVehicles.map((v) => (
+              <button
+                key={'fix-flat-' + v.id}
+                onClick={() => onResolveFlatTire && onResolveFlatTire(v.id, true)}
+                className="px-2.5 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs border border-[#1E222A] shadow cursor-pointer transition-all active:translate-y-0.5"
+                title="Send roadside assistance to replace flat tire ($15)"
+              >
+                🛞 Fix Tire ($15)
               </button>
             ))}
           </div>
@@ -639,37 +670,57 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             {/* White Dashed Divider Line separating North and South One-Way Lanes (x = -412 to -80) */}
             <line x1="-412" y1="237.5" x2="-80" y2="237.5" stroke="#f8fafc" strokeWidth="2" strokeDasharray="14 10" />
 
-            {/* North One-Way Lane Markings (from North Staging Bay) */}
-            <g opacity="0.85">
-              <path d="M -170 216 L -164 219.5 L -170 223" fill="none" stroke="#fef08a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -130 216 L -124 219.5 L -130 223" fill="none" stroke="#fef08a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -90 216 L -84 219.5 L -90 223" fill="none" stroke="#fef08a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* North One-Way Lane Multi-Direction Branching Arrows (Can move to any toll booth 1-6) */}
+            <g opacity="0.9">
+              {[-175, -130, -85].map((arrowX) => (
+                <g key={'north-arrow-' + arrowX} transform={`translate(${arrowX}, 219.75)`}>
+                  {/* Center arrow to middle booths */}
+                  <line x1="-12" y1="0" x2="6" y2="0" stroke="#fef08a" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M 2 -3.5 L 6.5 0 L 2 3.5" fill="none" stroke="#fef08a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Branching fork up to northern booths 1-2 */}
+                  <path d="M -4 0 C 0 -1, 1 -5, 6 -7" fill="none" stroke="#fef08a" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M 2 -8 L 6.5 -7 L 4.5 -3.5" fill="none" stroke="#fef08a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Branching fork down to southern booths 3-6 */}
+                  <path d="M -4 0 C 0 1, 1 5, 6 7" fill="none" stroke="#fef08a" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M 2 8 L 6.5 7 L 4.5 3.5" fill="none" stroke="#fef08a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+              ))}
             </g>
-            <text x="-310" y="222" fill="#fef08a" fontSize="6.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="0.8">
-              NORTH ONE-WAY LANE (FROM NORTH LOT) →
+            <text x="-315" y="222" fill="#fef08a" fontSize="6.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="0.8">
+              NORTH ONE-WAY LANE · ROUTES TO ANY TOLL (1–6) ⤅
             </text>
 
-            {/* South One-Way Lane Markings (from South Staging Bay) */}
-            <g opacity="0.85">
-              <path d="M -170 252 L -164 255.5 L -170 259" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -130 252 L -124 255.5 L -130 259" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -90 252 L -84 255.5 L -90 259" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {/* South One-Way Lane Multi-Direction Branching Arrows (Can move to any toll booth 1-6) */}
+            <g opacity="0.9">
+              {[-175, -130, -85].map((arrowX) => (
+                <g key={'south-arrow-' + arrowX} transform={`translate(${arrowX}, 255.25)`}>
+                  {/* Center arrow to middle booths */}
+                  <line x1="-12" y1="0" x2="6" y2="0" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" />
+                  <path d="M 2 -3.5 L 6.5 0 L 2 3.5" fill="none" stroke="#38bdf8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Branching fork up to northern booths 1-4 */}
+                  <path d="M -4 0 C 0 -1, 1 -5, 6 -7" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M 2 -8 L 6.5 -7 L 4.5 -3.5" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  {/* Branching fork down to southern booths 5-6 */}
+                  <path d="M -4 0 C 0 1, 1 5, 6 7" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeLinecap="round" />
+                  <path d="M 2 8 L 6.5 7 L 4.5 3.5" fill="none" stroke="#38bdf8" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </g>
+              ))}
             </g>
-            <text x="-310" y="258" fill="#38bdf8" fontSize="6.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="0.8">
-              SOUTH ONE-WAY LANE (FROM SOUTH LOT) →
+            <text x="-315" y="258" fill="#38bdf8" fontSize="6.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="0.8">
+              SOUTH ONE-WAY LANE · ROUTES TO ANY TOLL (1–6) ⤅
             </text>
 
             {/* Feeder Overhead Road Sign / Marker */}
-            <g transform="translate(-175, 168)">
-              <rect width="130" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
-              <text x="65" y="14" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
-                ONE-WAY EAST · AUTO-ROUTING →
+            <g transform="translate(-190, 168)">
+              <rect width="165" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
+              <text x="82.5" y="14" fill="#ffffff" fontSize="6.8" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
+                ONE-WAY EAST · BOTH LANES ROUTE TO ANY TOLL (1–6) →
               </text>
             </g>
 
             {/* Fan-Out Plaza Apron Road Markings (x = -80 to 50) */}
             <text x="-15" y="224" fill="#475569" fontSize="7.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.5" textAnchor="middle">
-              FERRY APPROACH · DIVERGING TO SHORTEST TOLL LANE
+              FERRY APPROACH · ALL LANES ACCESS TOLLS 1–6 (SHORTEST QUEUE)
             </text>
 
             {/* Concrete Lane Dividers separating all 6 lanes from fan-out (x=50) to toll gates (x=230) */}
@@ -684,33 +735,54 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             ))}
           </g>
 
-          {/* Fan-Out Plaza Transition Zone (x=-80 to 50) Curved Guide Tracks from North and South Lanes */}
+          {/* Fan-Out Plaza Transition Zone (x=-80 to 50) Curved Guide Tracks from BOTH North and South Lanes to ALL Toll Booths */}
           {booths.map((booth, idx) => {
             const destY = LANE_Y_POSITIONS[idx] + LANE_HEIGHT / 2;
-            const startY = idx <= 2 ? 219.75 : 255.25;
             return (
-              <g key={'fan-guide-' + booth.id}>
+              <g key={'fan-guide-all-' + booth.id}>
+                {/* Track from North Lane (219.75) to this booth */}
                 <path
-                  d={`M -80 ${startY} C -20 ${startY}, 0 ${destY}, 50 ${destY}`}
+                  d={`M -80 219.75 C -20 219.75, 0 ${destY}, 50 ${destY}`}
+                  fill="none"
+                  stroke={booth.unlocked ? '#fef08a' : '#475569'}
+                  strokeWidth={booth.unlocked ? 1.4 : 0.8}
+                  strokeDasharray={booth.unlocked ? '5 5' : '3 6'}
+                  opacity={booth.unlocked ? 0.55 : 0.15}
+                />
+                {/* Track from South Lane (255.25) to this booth */}
+                <path
+                  d={`M -80 255.25 C -20 255.25, 0 ${destY}, 50 ${destY}`}
                   fill="none"
                   stroke={booth.unlocked ? '#38bdf8' : '#475569'}
-                  strokeWidth={booth.unlocked ? 1.5 : 1}
-                  strokeDasharray={booth.unlocked ? '6 6' : '3 6'}
-                  opacity={booth.unlocked ? 0.65 : 0.2}
+                  strokeWidth={booth.unlocked ? 1.4 : 0.8}
+                  strokeDasharray={booth.unlocked ? '5 5' : '3 6'}
+                  opacity={booth.unlocked ? 0.55 : 0.15}
                 />
-                {/* Availability Indicator at entrance of each lane (x=40) */}
+
+                {/* Dual-Entrance Chevrons at entrance of each toll lane (x=34 to 46): Yellow from North, Blue from South */}
                 {booth.unlocked ? (
-                  <path
-                    d={`M 38 ${destY - 6} L 46 ${destY} L 38 ${destY + 6}`}
-                    fill="none"
-                    stroke="#10b981"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    opacity="0.8"
-                  />
+                  <g opacity="0.9">
+                    {/* Amber Chevron (North approach) */}
+                    <path
+                      d={`M 34 ${destY - 6} L 40 ${destY} L 34 ${destY + 6}`}
+                      fill="none"
+                      stroke="#fef08a"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                    {/* Sky Blue Chevron (South approach) */}
+                    <path
+                      d={`M 40 ${destY - 6} L 46 ${destY} L 40 ${destY + 6}`}
+                      fill="none"
+                      stroke="#38bdf8"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </g>
                 ) : (
-                  <g opacity="0.6">
+                  <g opacity="0.5">
                     <line x1="38" y1={destY - 5} x2="46" y2={destY + 5} stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
                     <line x1="46" y1={destY - 5} x2="38" y2={destY + 5} stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
                   </g>
@@ -1549,8 +1621,79 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                   {v.points}
                 </text>
 
+                {/* Flat Tire Pulsing Hazard Halo */}
+                {v.hasFlatTire && (
+                  <rect
+                    x="-4"
+                    y="-4"
+                    width={v.length + 8}
+                    height={v.width + 8}
+                    rx={8}
+                    fill="none"
+                    stroke="#ef4444"
+                    strokeWidth="2.5"
+                    strokeDasharray="4 3"
+                    className="animate-pulse"
+                  />
+                )}
+
+                {/* Deflated tire blow indicator */}
+                {v.hasFlatTire && (
+                  <text
+                    x={v.length - 10}
+                    y="-2"
+                    fontSize="10"
+                    className="animate-bounce"
+                  >
+                    💥
+                  </text>
+                )}
+
+                {/* Overhead Flat Tire Badge: immobilized right where it is at */}
+                {v.hasFlatTire && (
+                  <g
+                    transform={`translate(${v.length / 2 - 32}, -24)`}
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onResolveFlatTire && onResolveFlatTire(v.id, true);
+                    }}
+                  >
+                    <rect
+                      width="64"
+                      height="20"
+                      rx="5"
+                      fill="#1E222A"
+                      stroke="#ef4444"
+                      strokeWidth="2"
+                    />
+                    <text
+                      x="32"
+                      y="9"
+                      textAnchor="middle"
+                      fill="#fca5a5"
+                      fontSize="6.5"
+                      fontWeight="black"
+                      fontFamily="var(--font-mono)"
+                    >
+                      🛞 FLAT TIRE ({Math.ceil(v.flatTireRemaining || 0)}s)
+                    </text>
+                    <text
+                      x="32"
+                      y="16.5"
+                      textAnchor="middle"
+                      fill="#FFD200"
+                      fontSize="6"
+                      fontWeight="black"
+                      fontFamily="var(--font-mono)"
+                    >
+                      FIX TIRE ($15)
+                    </text>
+                  </g>
+                )}
+
                 {/* Slice Story affordance button on hover for large stories */}
-                {isHovered && canSlice && (
+                {isHovered && canSlice && !v.hasFlatTire && (
                   <g
                     transform={`translate(${v.length / 2 - 10}, -18)`}
                     onClick={(e) => {

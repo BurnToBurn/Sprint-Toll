@@ -6,12 +6,16 @@ interface StoryInspectorModalProps {
   vehicle: VehicleStory | null;
   onClose: () => void;
   onSliceStory: (id: string) => void;
+  onResolveFlatTire?: (id: string, emergency?: boolean) => void;
+  funds?: number;
 }
 
 export const StoryInspectorModal: React.FC<StoryInspectorModalProps> = ({
   vehicle,
   onClose,
-  onSliceStory
+  onSliceStory,
+  onResolveFlatTire,
+  funds
 }) => {
   if (!vehicle) return null;
 
@@ -110,6 +114,36 @@ export const StoryInspectorModal: React.FC<StoryInspectorModalProps> = ({
                 ? `North Lot (Stall N${Math.floor((vehicle.parkingSlotIndex ?? 0) / 2) + 1}) → North One-Way Lane`
                 : `South Lot (Stall S${Math.floor((vehicle.parkingSlotIndex ?? 0) / 2) + 1}) → South One-Way Lane`}
             </span>
+          </div>
+        )}
+
+        {/* Active Flat Tire Incident Alert */}
+        {vehicle.hasFlatTire && (
+          <div className="bg-[#EF4444]/15 border-2 border-[#EF4444] rounded-2xl p-4 space-y-2.5 text-xs text-[#1E222A] animate-pulse shadow-[0_2px_0_#EF4444]">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 font-black text-[#DC2626]" style={{ fontFamily: 'var(--font-heading)' }}>
+                <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626]" />
+                IMMOBILIZED: FLAT TIRE ON ROADWAY
+              </div>
+              <span className="font-mono font-bold text-[11px] bg-[#EF4444] text-white px-2 py-0.5 rounded-full">
+                {Math.ceil(vehicle.flatTireRemaining || 0)}s remaining
+              </span>
+            </div>
+            <p className="text-slate-700 font-medium leading-relaxed">
+              This vehicle suffered a blown tire right here where it stopped on the roadway! All trailing vehicles in this lane are blocked until roadside assistance replaces the tire.
+            </p>
+            {onResolveFlatTire && (
+              <button
+                onClick={() => {
+                  onResolveFlatTire(vehicle.id, true);
+                  onClose();
+                }}
+                disabled={funds !== undefined && funds < 15}
+                className="w-full py-2.5 px-3 bg-[#EF4444] hover:bg-[#DC2626] disabled:bg-slate-300 text-white font-black text-xs rounded-xl border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none transition-all flex items-center justify-center gap-2 cursor-pointer font-mono"
+              >
+                <span>🛞 Call Roadside Tire Assistance ($15)</span>
+              </button>
+            )}
           </div>
         )}
 
