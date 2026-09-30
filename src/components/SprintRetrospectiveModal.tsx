@@ -22,8 +22,16 @@ import {
   Receipt,
   Pause,
   Target,
-  X
+  X,
+  Share2,
+  Download,
+  Copy,
+  Check,
+  Camera,
+  Image,
+  ExternalLink
 } from 'lucide-react';
+import { generateSprintReportImage } from '../utils/generateSprintReportImage';
 
 interface SprintRetrospectiveModalProps {
   summary: SprintSummary | null;
@@ -38,6 +46,101 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
     enforceWip: true,
     upgradeBottleneck: false
   });
+  const [shareData, setShareData] = useState<{ dataUrl: string; blob: Blob } | null>(null);
+  const [isGeneratingShare, setIsGeneratingShare] = useState<boolean>(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState<boolean>(false);
+  const [copiedStatus, setCopiedStatus] = useState<string | null>(null);
+
+  // Auto-populate the report picture as soon as the report opens
+  useEffect(() => {
+    if (summary) {
+      generateSprintReportImage(summary)
+        .then((res) => setShareData(res))
+        .catch((err) => console.error('Failed to pre-generate report image', err));
+    }
+  }, [summary]);
+
+  const shareText = summary
+    ? `🚀 Shipped ${summary.deliveredPoints} story points on Day #${summary.dayNumber} with a Flow Grade of ${summary.grade} and ${summary.flowEfficiency}% flow efficiency in the Toll Plaza Agile Flow Simulator! 🚗💨 #HuntingtonBankHackathon2026`
+    : '#HuntingtonBankHackathon2026';
+
+  const handleOpenShare = async () => {
+    setIsShareModalOpen(true);
+    if (!shareData && summary) {
+      setIsGeneratingShare(true);
+      try {
+        const res = await generateSprintReportImage(summary);
+        setShareData(res);
+      } catch (err) {
+        console.error('Failed to generate sprint report image', err);
+      } finally {
+        setIsGeneratingShare(false);
+      }
+    }
+  };
+
+  const handleShareTwitter = () => {
+    if (!summary) return;
+    const url = window.location.href;
+    const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
+    window.open(intentUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleShareLinkedIn = () => {
+    if (!summary) return;
+    const url = window.location.href;
+    const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
+    window.open(linkedinUrl, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleDownloadImage = async () => {
+    if (!summary) return;
+    try {
+      let currentData = shareData;
+      if (!currentData) {
+        setIsGeneratingShare(true);
+        currentData = await generateSprintReportImage(summary);
+        setShareData(currentData);
+        setIsGeneratingShare(false);
+      }
+      const link = document.createElement('a');
+      link.download = `HuntingtonBankHackathon2026-Sprint-${summary.sprintNumber}-Day-${summary.dayNumber}-Report.png`;
+      link.href = currentData.dataUrl;
+      link.click();
+      setCopiedStatus('Picture downloaded!');
+      setTimeout(() => setCopiedStatus(null), 2500);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleCopyImage = async () => {
+    if (!summary) return;
+    try {
+      let currentData = shareData;
+      if (!currentData) {
+        setIsGeneratingShare(true);
+        currentData = await generateSprintReportImage(summary);
+        setShareData(currentData);
+        setIsGeneratingShare(false);
+      }
+      await navigator.clipboard.write([
+        new ClipboardItem({ 'image/png': currentData.blob })
+      ]);
+      setCopiedStatus('Picture copied to clipboard!');
+      setTimeout(() => setCopiedStatus(null), 2500);
+    } catch (err) {
+      await navigator.clipboard.writeText(shareText);
+      setCopiedStatus('Post text & hashtag copied!');
+      setTimeout(() => setCopiedStatus(null), 2500);
+    }
+  };
+
+  const handleCopyText = async () => {
+    await navigator.clipboard.writeText(shareText);
+    setCopiedStatus('Post text & hashtag copied!');
+    setTimeout(() => setCopiedStatus(null), 2500);
+  };
 
   // Handle Escape key to close modal
   useEffect(() => {
@@ -196,6 +299,78 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
             </div>
           </div>
 
+          {/* Huntington Bank Hackathon 2026 Social Share Ribbon */}
+          <div className="mt-3.5 px-3.5 py-2 rounded-xl bg-gradient-to-r from-[#005A36]/15 via-[#10B981]/10 to-[#FFD200]/15 border-2 border-[#10B981]/40 flex flex-wrap items-center justify-between gap-2.5 shadow-sm">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse" />
+              <span className="text-xs font-black font-mono text-[#005A36] uppercase tracking-wider">
+                #HuntingtonBankHackathon2026
+              </span>
+              <span className="hidden sm:inline text-[11px] text-slate-500 font-semibold">
+                &bull; Auto-populate report picture to share
+              </span>
+              {copiedStatus && (
+                <span className="px-2 py-0.5 rounded-md bg-[#10B981] text-white font-mono text-[10px] font-bold animate-fadeIn">
+                  ✓ {copiedStatus}
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* X / Twitter */}
+              <button
+                onClick={handleShareTwitter}
+                className="px-2.5 py-1 rounded-lg bg-black hover:bg-neutral-800 text-white font-mono text-xs font-bold transition-all flex items-center gap-1.5 border border-black shadow-sm cursor-pointer active:scale-95"
+                title="Share on X / Twitter with #HuntingtonBankHackathon2026"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+                <span>Post</span>
+              </button>
+
+              {/* LinkedIn */}
+              <button
+                onClick={handleShareLinkedIn}
+                className="px-2.5 py-1 rounded-lg bg-[#0A66C2] hover:bg-[#084e96] text-white font-mono text-xs font-bold transition-all flex items-center gap-1.5 border border-[#0A66C2] shadow-sm cursor-pointer active:scale-95"
+                title="Share on LinkedIn with #HuntingtonBankHackathon2026"
+              >
+                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+                </svg>
+                <span>Share</span>
+              </button>
+
+              {/* Auto-Populate Picture Button */}
+              <button
+                onClick={handleOpenShare}
+                className="px-3 py-1 rounded-lg bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-mono text-xs font-black transition-all flex items-center gap-1.5 border border-[#1E222A] shadow-sm cursor-pointer active:scale-95"
+                title="Auto-populate picture of the report with #HuntingtonBankHackathon2026"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Auto-Picture</span>
+              </button>
+
+              {/* Download Image Button */}
+              <button
+                onClick={handleDownloadImage}
+                className="p-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-mono text-xs font-bold transition-all border border-slate-300 shadow-sm cursor-pointer active:scale-95"
+                title="Download PNG picture of this report"
+              >
+                <Download className="w-3.5 h-3.5" />
+              </button>
+
+              {/* Copy Picture Button */}
+              <button
+                onClick={handleCopyImage}
+                className="p-1 rounded-lg bg-white hover:bg-slate-100 text-slate-700 font-mono text-xs font-bold transition-all border border-slate-300 shadow-sm cursor-pointer active:scale-95"
+                title="Copy picture to clipboard"
+              >
+                <Copy className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+
           {/* Tab Navigation */}
           <div className="flex items-center gap-2 mt-4 pt-2 border-t-2 border-[#1E222A]/10 font-bold text-xs">
             <button
@@ -294,6 +469,103 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                   <div className="text-[11px] text-slate-500 font-bold mt-0.5">
                     {summary.leftBehindPoints} pts missed boat
                   </div>
+                </div>
+              </div>
+
+              {/* Huntington Bank Hackathon 2026 Auto-Populated Picture Share Card */}
+              <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-[#181D26] to-[#11141B] border-2 border-[#10B981]/50 text-white shadow-[0_4px_0_#1E222A] space-y-3.5">
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="px-2.5 py-1 rounded-md bg-[#005A36] text-[#A7F3D0] border border-[#10B981]/40 font-mono text-xs font-black flex items-center gap-1.5">
+                      🏛️ Huntington Bank Hackathon 2026
+                    </span>
+                    <span className="font-mono text-xs font-bold text-[#FFD200]">
+                      #HuntingtonBankHackathon2026
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
+                    {/* Share on X */}
+                    <button
+                      onClick={handleShareTwitter}
+                      className="px-2.5 py-1.5 rounded-xl bg-black hover:bg-neutral-800 text-white border border-neutral-700 font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      title="Share on X / Twitter with #HuntingtonBankHackathon2026"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                      </svg>
+                      <span>Post</span>
+                    </button>
+
+                    {/* Share on LinkedIn */}
+                    <button
+                      onClick={handleShareLinkedIn}
+                      className="px-2.5 py-1.5 rounded-xl bg-[#0A66C2] hover:bg-[#084e96] text-white border border-[#0A66C2] font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      title="Share on LinkedIn with #HuntingtonBankHackathon2026"
+                    >
+                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+                      </svg>
+                      <span>LinkedIn</span>
+                    </button>
+
+                    {/* Copy Picture */}
+                    <button
+                      onClick={handleCopyImage}
+                      className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
+                      title="Copy picture to clipboard"
+                    >
+                      <Copy className="w-3.5 h-3.5 text-[#38BDF8]" />
+                      <span>Copy</span>
+                    </button>
+
+                    {/* Download PNG */}
+                    <button
+                      onClick={handleDownloadImage}
+                      className="px-3 py-1.5 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white border border-[#10B981] font-mono text-xs font-black transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+                      title="Download high-resolution report picture"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                      <span>Download PNG</span>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Auto-populated live picture preview */}
+                <div
+                  className="relative rounded-xl overflow-hidden border-2 border-[#2E3848] bg-black/70 group cursor-pointer"
+                  onClick={handleOpenShare}
+                >
+                  {shareData ? (
+                    <img
+                      src={shareData.dataUrl}
+                      alt="Huntington Bank Hackathon 2026 Sprint Performance Report"
+                      className="w-full h-auto object-cover max-h-[280px] rounded-lg transition-transform group-hover:scale-[1.01]"
+                    />
+                  ) : (
+                    <div className="w-full h-44 flex flex-col items-center justify-center gap-2.5 text-slate-400 font-mono text-xs">
+                      <Sparkles className="w-6 h-6 text-[#FFD200] animate-spin" />
+                      <span>Auto-populating high-resolution report picture with #HuntingtonBankHackathon2026...</span>
+                    </div>
+                  )}
+
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 backdrop-blur-[2px]">
+                    <span className="px-4 py-2 rounded-xl bg-white text-[#1E222A] font-black text-xs font-mono flex items-center gap-1.5 shadow-lg">
+                      <Camera className="w-4 h-4 text-[#10B981]" />
+                      <span>Click to Enlarge &amp; Share</span>
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-400 font-mono">
+                  <span>Auto-populated 1200&times;675 social picture card with hashtag</span>
+                  <button
+                    onClick={handleOpenShare}
+                    className="text-[#FFD200] hover:text-[#FFE043] font-bold flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>Open Fullscreen Picture &amp; Share Hub</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                  </button>
                 </div>
               </div>
 
@@ -754,7 +1026,16 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
             <span>Next Cycle: Day #{summary.dayNumber + 1} Daily Sprint</span>
           </div>
 
-          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+          <div className="flex items-center gap-2.5 w-full sm:w-auto justify-end flex-wrap">
+            <button
+              onClick={handleOpenShare}
+              className="w-full sm:w-auto py-2.5 px-4 bg-white hover:bg-slate-100 text-[#1E222A] font-black text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
+              title="Auto-populate picture of the report with #HuntingtonBankHackathon2026"
+            >
+              <Camera className="w-4 h-4 text-[#10B981]" />
+              <span>Share Report (#HuntingtonBankHackathon2026)</span>
+            </button>
+
             <button
               onClick={(e) => {
                 e.preventDefault();
@@ -775,6 +1056,143 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
           </div>
         </div>
       </div>
+
+      {/* Fullscreen Picture Preview & Social Share Dialog Modal */}
+      {isShareModalOpen && (
+        <div
+          className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn"
+          onClick={() => setIsShareModalOpen(false)}
+        >
+          <div
+            className="relative w-full max-w-2xl bg-[#1E222A] border-[3px] border-[#384050] rounded-3xl shadow-[0_12px_0_#0F1216] text-white overflow-hidden flex flex-col max-h-[92vh]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="px-5 py-4 border-b-2 border-[#384050] bg-[#242933] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-[#005A36] text-[#A7F3D0] border border-[#10B981]">
+                  <Share2 className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[10px] font-mono font-black text-[#FFD200] uppercase tracking-wider">
+                      #HuntingtonBankHackathon2026
+                    </span>
+                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white leading-tight">
+                    Share Performance Report Picture
+                  </h3>
+                </div>
+              </div>
+
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Scrollable content */}
+            <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
+              {/* Picture of Report Preview */}
+              <div className="rounded-2xl overflow-hidden border-2 border-[#384050] bg-black/70 shadow-lg">
+                {shareData ? (
+                  <img
+                    src={shareData.dataUrl}
+                    alt="Huntington Bank Hackathon 2026 Sprint Performance Report Card"
+                    className="w-full h-auto object-contain rounded-xl"
+                  />
+                ) : (
+                  <div className="w-full h-56 flex flex-col items-center justify-center gap-2 text-slate-400 font-mono text-xs">
+                    <Sparkles className="w-6 h-6 text-[#FFD200] animate-spin" />
+                    <span>Auto-populating high-resolution report picture...</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Pre-populated post text with hashtag */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs font-mono text-slate-400 font-bold">
+                  <span>Pre-Populated Post Text</span>
+                  <button
+                    onClick={handleCopyText}
+                    className="text-[#FFD200] hover:text-[#FFE043] flex items-center gap-1 cursor-pointer font-bold"
+                  >
+                    <Copy className="w-3 h-3" />
+                    <span>Copy Text</span>
+                  </button>
+                </div>
+                <div className="p-3 rounded-xl bg-[#141820] border-2 border-[#384050] font-mono text-xs text-slate-200 select-all leading-relaxed">
+                  {shareText}
+                </div>
+              </div>
+
+              {/* Share Destination Buttons Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+                {/* X / Twitter */}
+                <button
+                  onClick={handleShareTwitter}
+                  className="py-2.5 px-3 rounded-xl bg-black hover:bg-neutral-800 text-white font-mono text-xs font-bold border-2 border-[#384050] transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                >
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                  </svg>
+                  <span>Share on 𝕏</span>
+                </button>
+
+                {/* LinkedIn */}
+                <button
+                  onClick={handleShareLinkedIn}
+                  className="py-2.5 px-3 rounded-xl bg-[#0A66C2] hover:bg-[#084e96] text-white font-mono text-xs font-bold border-2 border-[#0A66C2] transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                >
+                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
+                    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
+                  </svg>
+                  <span>LinkedIn</span>
+                </button>
+
+                {/* Copy Picture */}
+                <button
+                  onClick={handleCopyImage}
+                  className="py-2.5 px-3 rounded-xl bg-[#2B303C] hover:bg-[#343B4A] text-slate-200 font-mono text-xs font-bold border-2 border-[#384050] transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                >
+                  <Copy className="w-5 h-5 text-[#38BDF8]" />
+                  <span>Copy Image</span>
+                </button>
+
+                {/* Download PNG */}
+                <button
+                  onClick={handleDownloadImage}
+                  className="py-2.5 px-3 rounded-xl bg-[#10B981] hover:bg-[#059669] text-white font-mono text-xs font-black border-2 border-[#10B981] transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
+                >
+                  <Download className="w-5 h-5" />
+                  <span>Download PNG</span>
+                </button>
+              </div>
+
+              {/* Feedback toast banner */}
+              {copiedStatus && (
+                <div className="p-3 rounded-xl bg-[#10B981]/20 border border-[#10B981] text-[#10B981] font-mono text-xs font-bold text-center animate-fadeIn flex items-center justify-center gap-2">
+                  <Check className="w-4 h-4" />
+                  <span>{copiedStatus}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-5 py-3 border-t-2 border-[#384050] bg-[#242933] flex items-center justify-between text-xs text-slate-400 font-mono">
+              <span>Includes official hashtag #HuntingtonBankHackathon2026</span>
+              <button
+                onClick={() => setIsShareModalOpen(false)}
+                className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
