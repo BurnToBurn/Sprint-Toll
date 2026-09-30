@@ -2,7 +2,7 @@ import { SprintSummary } from '../types/game';
 
 /**
  * Generates a high-resolution (1200x675, 16:9 social share card) PNG picture
- * of the Daily Sprint Performance Report with the hashtag #HuntingtonBankHackathon2026.
+ * of the Daily Sprint Performance Report with the hashtag #HuntingtonHackathon2026.
  */
 export async function generateSprintReportImage(summary: SprintSummary): Promise<{ dataUrl: string; blob: Blob }> {
   return new Promise((resolve, reject) => {
@@ -73,7 +73,7 @@ export async function generateSprintReportImage(summary: SprintSummary): Promise
 
       ctx.fillStyle = '#FFD200';
       ctx.font = 'black 14px monospace';
-      ctx.fillText('#HuntingtonBankHackathon2026', 436, 64);
+      ctx.fillText('#HuntingtonHackathon2026', 436, 64);
 
       // Main Title & Subtitle
       ctx.fillStyle = '#FFFFFF';
@@ -225,11 +225,11 @@ export async function generateSprintReportImage(summary: SprintSummary): Promise
       ctx.fillStyle = '#FFD200';
       ctx.font = '900 20px monospace';
       ctx.textAlign = 'right';
-      ctx.fillText('#HuntingtonBankHackathon2026', 1130, 574);
+      ctx.fillText('#HuntingtonHackathon2026', 1130, 574);
 
       ctx.fillStyle = '#38BDF8';
       ctx.font = '600 13px monospace';
-      ctx.fillText('#AgileDelivery #KanbanFlow #HuntingtonBank', 1130, 600);
+      ctx.fillText('#AgileDelivery #KanbanFlow #HuntingtonHackathon2026', 1130, 600);
       ctx.textAlign = 'left'; // Reset
 
       // Convert to blob and dataUrl

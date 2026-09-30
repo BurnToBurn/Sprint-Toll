@@ -61,8 +61,8 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
   }, [summary]);
 
   const shareText = summary
-    ? `🚀 Shipped ${summary.deliveredPoints} story points on Day #${summary.dayNumber} with a Flow Grade of ${summary.grade} and ${summary.flowEfficiency}% flow efficiency in the Toll Plaza Agile Flow Simulator! 🚗💨 #HuntingtonBankHackathon2026`
-    : '#HuntingtonBankHackathon2026';
+    ? `🚀 Shipped ${summary.deliveredPoints} story points on Day #${summary.dayNumber} with a Flow Grade of ${summary.grade} and ${summary.flowEfficiency}% flow efficiency in the Toll Plaza Agile Flow Simulator! 🚗💨 #HuntingtonHackathon2026`
+    : '#HuntingtonHackathon2026';
 
   const handleOpenShare = async () => {
     setIsShareModalOpen(true);
@@ -77,20 +77,6 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
         setIsGeneratingShare(false);
       }
     }
-  };
-
-  const handleShareTwitter = () => {
-    if (!summary) return;
-    const url = window.location.href;
-    const intentUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(url)}`;
-    window.open(intentUrl, '_blank', 'noopener,noreferrer');
-  };
-
-  const handleShareLinkedIn = () => {
-    if (!summary) return;
-    const url = window.location.href;
-    const linkedinUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
-    window.open(linkedinUrl, '_blank', 'noopener,noreferrer');
   };
 
   const handleDownloadImage = async () => {
@@ -304,7 +290,7 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
             <div className="flex items-center gap-2 flex-wrap">
               <span className="w-2.5 h-2.5 rounded-full bg-[#10B981] animate-pulse" />
               <span className="text-xs font-black font-mono text-[#005A36] uppercase tracking-wider">
-                #HuntingtonBankHackathon2026
+                #HuntingtonHackathon2026
               </span>
               <span className="hidden sm:inline text-[11px] text-slate-500 font-semibold">
                 &bull; Auto-populate report picture to share
@@ -317,35 +303,11 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
             </div>
 
             <div className="flex items-center gap-1.5 flex-wrap">
-              {/* X / Twitter */}
-              <button
-                onClick={handleShareTwitter}
-                className="px-2.5 py-1 rounded-lg bg-black hover:bg-neutral-800 text-white font-mono text-xs font-bold transition-all flex items-center gap-1.5 border border-black shadow-sm cursor-pointer active:scale-95"
-                title="Share on X / Twitter with #HuntingtonBankHackathon2026"
-              >
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                </svg>
-                <span>Post</span>
-              </button>
-
-              {/* LinkedIn */}
-              <button
-                onClick={handleShareLinkedIn}
-                className="px-2.5 py-1 rounded-lg bg-[#0A66C2] hover:bg-[#084e96] text-white font-mono text-xs font-bold transition-all flex items-center gap-1.5 border border-[#0A66C2] shadow-sm cursor-pointer active:scale-95"
-                title="Share on LinkedIn with #HuntingtonBankHackathon2026"
-              >
-                <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                  <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
-                </svg>
-                <span>Share</span>
-              </button>
-
               {/* Auto-Populate Picture Button */}
               <button
                 onClick={handleOpenShare}
                 className="px-3 py-1 rounded-lg bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-mono text-xs font-black transition-all flex items-center gap-1.5 border border-[#1E222A] shadow-sm cursor-pointer active:scale-95"
-                title="Auto-populate picture of the report with #HuntingtonBankHackathon2026"
+                title="Auto-populate picture of the report with #HuntingtonHackathon2026"
               >
                 <Camera className="w-3.5 h-3.5" />
                 <span>Auto-Picture</span>
@@ -480,35 +442,11 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                       🏛️ Huntington Bank Hackathon 2026
                     </span>
                     <span className="font-mono text-xs font-bold text-[#FFD200]">
-                      #HuntingtonBankHackathon2026
+                      #HuntingtonHackathon2026
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap self-end sm:self-auto">
-                    {/* Share on X */}
-                    <button
-                      onClick={handleShareTwitter}
-                      className="px-2.5 py-1.5 rounded-xl bg-black hover:bg-neutral-800 text-white border border-neutral-700 font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                      title="Share on X / Twitter with #HuntingtonBankHackathon2026"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                      </svg>
-                      <span>Post</span>
-                    </button>
-
-                    {/* Share on LinkedIn */}
-                    <button
-                      onClick={handleShareLinkedIn}
-                      className="px-2.5 py-1.5 rounded-xl bg-[#0A66C2] hover:bg-[#084e96] text-white border border-[#0A66C2] font-mono text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-                      title="Share on LinkedIn with #HuntingtonBankHackathon2026"
-                    >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                        <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
-                      </svg>
-                      <span>LinkedIn</span>
-                    </button>
-
                     {/* Copy Picture */}
                     <button
                       onClick={handleCopyImage}
@@ -545,7 +483,7 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                   ) : (
                     <div className="w-full h-44 flex flex-col items-center justify-center gap-2.5 text-slate-400 font-mono text-xs">
                       <Sparkles className="w-6 h-6 text-[#FFD200] animate-spin" />
-                      <span>Auto-populating high-resolution report picture with #HuntingtonBankHackathon2026...</span>
+                      <span>Auto-populating high-resolution report picture with #HuntingtonHackathon2026...</span>
                     </div>
                   )}
 
@@ -1030,10 +968,10 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
             <button
               onClick={handleOpenShare}
               className="w-full sm:w-auto py-2.5 px-4 bg-white hover:bg-slate-100 text-[#1E222A] font-black text-xs sm:text-sm rounded-xl transition-all flex items-center justify-center gap-2 border-2 border-[#1E222A] shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none cursor-pointer"
-              title="Auto-populate picture of the report with #HuntingtonBankHackathon2026"
+              title="Auto-populate picture of the report with #HuntingtonHackathon2026"
             >
               <Camera className="w-4 h-4 text-[#10B981]" />
-              <span>Share Report (#HuntingtonBankHackathon2026)</span>
+              <span>Share Report (#HuntingtonHackathon2026)</span>
             </button>
 
             <button
@@ -1076,7 +1014,7 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
                 <div>
                   <div className="flex items-center gap-2">
                     <span className="text-[10px] font-mono font-black text-[#FFD200] uppercase tracking-wider">
-                      #HuntingtonBankHackathon2026
+                      #HuntingtonHackathon2026
                     </span>
                   </div>
                   <h3 className="text-base sm:text-lg font-black text-white leading-tight">
@@ -1129,29 +1067,7 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
               </div>
 
               {/* Share Destination Buttons Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                {/* X / Twitter */}
-                <button
-                  onClick={handleShareTwitter}
-                  className="py-2.5 px-3 rounded-xl bg-black hover:bg-neutral-800 text-white font-mono text-xs font-bold border-2 border-[#384050] transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                >
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-                  </svg>
-                  <span>Share on 𝕏</span>
-                </button>
-
-                {/* LinkedIn */}
-                <button
-                  onClick={handleShareLinkedIn}
-                  className="py-2.5 px-3 rounded-xl bg-[#0A66C2] hover:bg-[#084e96] text-white font-mono text-xs font-bold border-2 border-[#0A66C2] transition-all flex flex-col items-center justify-center gap-1.5 cursor-pointer active:scale-95 shadow-sm"
-                >
-                  <svg className="w-5 h-5 fill-current" viewBox="0 0 24 24">
-                    <path d="M19 3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14m-.5 15.5v-5.3a3.26 3.26 0 0 0-3.26-3.26c-.85 0-1.84.52-2.28 1.3v-1.11h-2.79v8.37h2.79v-4.93c0-.77.62-1.4 1.39-1.4a1.4 1.4 0 0 1 1.4 1.4v4.93h2.75M6.88 8.56a1.68 1.68 0 0 0 1.68-1.68c0-.93-.75-1.69-1.68-1.69a1.69 1.69 0 0 0-1.69 1.69c0 .93.76 1.68 1.69 1.68m1.39 9.94v-8.37H5.5v8.37h2.77z" />
-                  </svg>
-                  <span>LinkedIn</span>
-                </button>
-
+              <div className="grid grid-cols-2 gap-2.5 pt-1">
                 {/* Copy Picture */}
                 <button
                   onClick={handleCopyImage}
@@ -1182,7 +1098,7 @@ export const SprintRetrospectiveModal: React.FC<SprintRetrospectiveModalProps> =
 
             {/* Footer */}
             <div className="px-5 py-3 border-t-2 border-[#384050] bg-[#242933] flex items-center justify-between text-xs text-slate-400 font-mono">
-              <span>Includes official hashtag #HuntingtonBankHackathon2026</span>
+              <span>Includes official hashtag #HuntingtonHackathon2026</span>
               <button
                 onClick={() => setIsShareModalOpen(false)}
                 className="px-4 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-600 font-bold cursor-pointer"
