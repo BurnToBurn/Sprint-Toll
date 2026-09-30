@@ -7,15 +7,18 @@ import {
   Sliders,
   Lightbulb,
   Zap,
-  HelpCircle
+  HelpCircle,
+  ArrowRight,
+  X
 } from 'lucide-react';
 import { sound } from '../utils/audio';
 
 interface AgileAcademyModalProps {
   onAwardBonus: (amount: number) => void;
+  onClose?: () => void;
 }
 
-export const AgileAcademyModal: React.FC<AgileAcademyModalProps> = ({ onAwardBonus }) => {
+export const AgileAcademyModal: React.FC<AgileAcademyModalProps> = ({ onAwardBonus, onClose }) => {
   const [selectedLessonId, setSelectedLessonId] = useState<string>(AGILE_LESSONS[0].id);
 
   // Little's Law Sandbox State
@@ -341,6 +344,34 @@ export const AgileAcademyModal: React.FC<AgileAcademyModalProps> = ({ onAwardBon
           })}
         </div>
       </div>
+
+      {/* Bottom Action Footer with Close Button */}
+      {onClose && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 sm:p-5 bg-white rounded-3xl border-[3px] border-[#1E222A] shadow-[0_6px_0_#1E222A]">
+          <div className="flex items-center gap-3 text-xs sm:text-sm text-slate-700 font-bold">
+            <div className="w-10 h-10 rounded-2xl bg-[#004831] border-2 border-[#1E222A] text-[#FFD200] flex items-center justify-center font-black shadow-sm shrink-0">
+              <GraduationCap className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-slate-900 font-black" style={{ fontFamily: 'var(--font-heading)' }}>
+                Mastered These Concepts?
+              </div>
+              <p className="text-xs text-slate-500 font-semibold">
+                Return to the simulation to optimize flow, eliminate bottlenecks, and ship cargo.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onClose}
+            className="w-full sm:w-auto px-6 py-3 bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs sm:text-sm rounded-2xl border-2 border-[#1E222A] shadow-[0_4px_0_#1E222A] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer flex items-center justify-center gap-2 shrink-0"
+            style={{ fontFamily: 'var(--font-heading)' }}
+          >
+            <span>Close Academy &amp; Return to Simulation</span>
+            <ArrowRight className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 };

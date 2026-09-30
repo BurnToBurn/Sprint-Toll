@@ -24,6 +24,10 @@ export interface VehicleStory {
   state: 'staged' | 'approaching' | 'queued' | 'processing' | 'to_dock' | 'on_ferry' | 'departed';
   laneQueuePosition: number; // 0 = at the booth, 1 = right behind, etc.
   parkingSlotIndex?: number; // 0, 1, 2... slot index in the sprint parking lot
+  feederLane?: 'north' | 'south'; // North or South one-way feeder lane
+  hasChosenPlazaLane?: boolean; // True once vehicle evaluated shortest lane upon entering plaza
+  hasFlatTire?: boolean; // True if vehicle currently suffered a blown tire
+  flatTireRemaining?: number; // Seconds remaining until roadside tire service fixes it
 }
 
 export type BacklogPriority = 'critical' | 'high' | 'medium' | 'low';
@@ -52,7 +56,7 @@ export interface SprintPlan {
 
 export type LaneSpecialization = 'all' | 'small_only' | 'standard' | 'heavy_only';
 
-export type IncidentType = 'flat_tire' | 'breakdown' | 'scanner_glitch' | 'spill_cleanup';
+export type IncidentType = 'breakdown' | 'scanner_glitch' | 'spill_cleanup' | 'power_loss';
 
 export interface BoothIncident {
   id: string;
@@ -152,6 +156,7 @@ export interface RetrospectiveLesson {
 export interface DailyFinancialSettlement {
   grossTollRevenue: number;
   ferryDeliveryBonus: number;
+  overDeliveryBonus?: number; // Extra money awarded for delivering points over parking lot commitment
   totalGrossRevenue: number;
   // Itemized daily dues & taxes
   efficiencyTax: number; // Tax on higher efficiency toll booths
@@ -161,6 +166,21 @@ export interface DailyFinancialSettlement {
   baseFacilityDues: number; // Base municipal operating fee per open lane
   totalDailyDues: number; // Combined deductions for daily dues & taxes
   netFundingAwarded: number; // Net funds credited to player's bank account
+}
+
+export interface ParkingLotCommitmentEvaluation {
+  committedPoints: number; // Story points committed in the parking lot staging
+  committedStoriesCount: number; // Number of user stories committed
+  deliveredPoints: number; // Story points successfully loaded & shipped on ferry
+  deliveredStoriesCount: number; // Number of user stories shipped
+  overDeliveredPoints: number; // Points delivered beyond initial commitment (0 if under)
+  underDeliveredPoints: number; // Points shortfall (0 if over)
+  completionRate: number; // Percentage delivered vs committed (e.g. 120%)
+  evaluationStatus: 'over_delivered' | 'exact_match' | 'under_delivered';
+  bonusAwarded: number; // Bonus money earned for delivering more points than committed
+  capacityAdjustment: number; // Adjustment to sprint capacity for next time based on over-delivery
+  nextSprintCapacity: number; // Calibrated capacity for the upcoming sprint
+  evaluationNotes: string; // Agile analysis of commitment vs delivery
 }
 
 export interface SprintSummary {
@@ -180,6 +200,8 @@ export interface SprintSummary {
   departureReason?: 'full' | 'timer' | 'manual';
   // Financial settlement at day end
   financialSettlement?: DailyFinancialSettlement;
+  // Commitment vs Delivered evaluation
+  commitmentEvaluation?: ParkingLotCommitmentEvaluation;
   // Enriched simulation metrics for retrospective report
   bottleneckLaneName?: string;
   bottleneckQueueCount?: number;

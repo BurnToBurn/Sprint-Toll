@@ -50,6 +50,7 @@ export default function App() {
     commitSprintPlanning,
     dispatchNextFromParkingLot,
     resolveBoothIncident,
+    resolveVehicleFlatTire,
     // Scenario engine
     activeScenario,
     activeScenarioDef,
@@ -203,6 +204,7 @@ export default function App() {
               onToggleContinuousFlow={toggleContinuousFlowMode}
               funds={funds}
               onResolveIncident={resolveBoothIncident}
+              onResolveFlatTire={resolveVehicleFlatTire}
               onDispatchFromParkingLot={dispatchNextFromParkingLot}
               onOpenSprintPlanning={openSprintPlanning}
               onOpenUpgrades={() => setIsUpgradesOpen(true)}
@@ -215,6 +217,7 @@ export default function App() {
             onAwardBonus={(amount) => {
               addFunds(amount);
             }}
+            onClose={() => setActiveTab('simulation')}
           />
         )}
       </main>
@@ -273,6 +276,8 @@ export default function App() {
         vehicle={selectedVehicle}
         onClose={() => setSelectedVehicle(null)}
         onSliceStory={sliceStory}
+        onResolveFlatTire={resolveVehicleFlatTire}
+        funds={funds}
       />
 
       <SprintRetrospectiveModal

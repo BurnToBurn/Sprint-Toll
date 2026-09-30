@@ -394,6 +394,48 @@ class SoundEngine {
   }
 
   /**
+   * Vehicle Flat Tire hiss / pop sound
+   */
+  public playFlatTire() {
+    const ctx = this.getContext();
+    if (!ctx) return;
+
+    try {
+      const now = ctx.currentTime;
+      // Tire pop oscillator
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(260, now);
+      osc.frequency.exponentialRampToValueAtTime(70, now + 0.15);
+      gain.gain.setValueAtTime(0.18, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.2);
+
+      // Deflation hiss
+      const bufferSize = Math.floor(ctx.sampleRate * 0.3);
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (ctx.sampleRate * 0.1));
+      }
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.1, now + 0.04);
+      noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      noise.connect(noiseGain);
+      noiseGain.connect(ctx.destination);
+      noise.start(now + 0.04);
+    } catch {
+      // Ignore
+    }
+  }
+
+  /**
    * Roadside repair wrench / fix complete sound
    */
   public playRepair() {

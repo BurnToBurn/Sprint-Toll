@@ -12,7 +12,8 @@ import {
   StoryPoint,
   LaneSpecialization,
   DayPhase,
-  BacklogItem
+  BacklogItem,
+  ParkingLotCommitmentEvaluation
 } from '../types/game';
 import { ScenarioDefinition, ActiveScenarioState } from '../types/scenarios';
 import { PREDETERMINED_SCENARIOS } from '../data/scenarios';
@@ -317,6 +318,7 @@ export function useGameEngine() {
   );
   const [isSprintPlanningOpen, setIsSprintPlanningOpen] = useState<boolean>(false);
   const lastParkingReleaseTimeRef = useRef<number>(0);
+  const timeSinceLastFlatTireRef = useRef<number>(0);
 
   // Main Menu State: starts on the main menu
   const [isMainMenuOpen, setIsMainMenuOpen] = useState<boolean>(true);
@@ -355,6 +357,17 @@ export function useGameEngine() {
 
   // Refs for loop state to avoid closure staleness
   const lastCountdownSecondRef = useRef<number>(-1);
+
+  // Parking lot sprint commitment tracking (points & story count committed during planning)
+  const [committedParkingLotStats, setCommittedParkingLotStats] = useState<{ points: number; count: number }>(() => {
+    const initialBatch = preSelectOptimalBatch(generateDailyBacklog(1), INITIAL_FERRY.capacity);
+    const sel = initialBatch.filter((b) => b.selected);
+    return {
+      points: sel.reduce((sum, item) => sum + item.points, 0),
+      count: sel.length
+    };
+  });
+
   const stateRef = useRef({
     funds,
     pendingDailyRevenue,
@@ -365,6 +378,7 @@ export function useGameEngine() {
     isMainMenuOpen: true,
     isSprintPlanningOpen: false,
     hasStartedGame: false,
+    committedParkingLotStats: { points: 30, count: 6 },
     sprintSummary: null as SprintSummary | null,
     activeScenario: null as ActiveScenarioState | null,
     activeScenarioDef: null as ScenarioDefinition | null,
@@ -388,7 +402,8 @@ export function useGameEngine() {
     stateRef.current.isMainMenuOpen = isMainMenuOpen;
     stateRef.current.isSprintPlanningOpen = isSprintPlanningOpen;
     stateRef.current.hasStartedGame = hasStartedGame;
-  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, isSprintPlanningOpen, hasStartedGame]);
+    stateRef.current.committedParkingLotStats = committedParkingLotStats;
+  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, isSprintPlanningOpen, hasStartedGame, committedParkingLotStats]);
 
   // Synchronize season changes to localStorage and ferry state
   useEffect(() => {
@@ -454,32 +469,83 @@ export function useGameEngine() {
       targetY: 0,
       laneIndex: -1,
       state: 'approaching',
-      laneQueuePosition: -1
+      laneQueuePosition: -1,
+      hasFlatTire: false,
+      flatTireRemaining: 0
     };
   }, []);
 
-  // Assign vehicle randomly into an available (unlocked) lane
-  const assignVehicleToLane = useCallback((vehicle: VehicleStory, currentBooths: TollBooth[]) => {
-    const unlockedBooths = currentBooths.filter((b) => b.unlocked);
-    if (unlockedBooths.length === 0) return 0;
+  // Select the shortest toll lane (fewest vehicles queued / lowest point load, respecting specialization & north/south affinity)
+  const selectShortestTollLane = useCallback(
+    (vehicle: VehicleStory, currentBooths: TollBooth[], currentVehicles?: VehicleStory[]) => {
+      const unlockedBooths = currentBooths.filter((b) => b.unlocked);
+      if (unlockedBooths.length === 0) return 0;
 
-    // Filter booths compatible with vehicle points / specialization
-    const eligibleBooths = unlockedBooths.filter((b) => {
-      if (b.specialization === 'small_only') return vehicle.points <= 3;
-      if (b.specialization === 'heavy_only') return vehicle.points >= 5;
-      return true; // 'all'
-    });
+      // Filter booths compatible with vehicle points / specialization
+      let eligibleBooths = unlockedBooths.filter((b) => {
+        if (b.specialization === 'small_only') return vehicle.points <= 3;
+        if (b.specialization === 'heavy_only') return vehicle.points >= 5;
+        return true; // 'all'
+      });
+      if (eligibleBooths.length === 0) {
+        eligibleBooths = unlockedBooths;
+      }
 
-    const candidateBooths = eligibleBooths.length > 0 ? eligibleBooths : unlockedBooths;
+      const allVehicles = currentVehicles || stateRef.current.vehicles;
+      const isNorth =
+        vehicle.feederLane === 'north' ||
+        (vehicle.parkingSlotIndex !== undefined && vehicle.parkingSlotIndex % 2 === 0);
 
-    // Spread randomly among available lanes!
-    const randomIndex = Math.floor(Math.random() * candidateBooths.length);
-    return candidateBooths[randomIndex].id;
-  }, []);
+      // Score each booth: lower score = shorter lane / faster queue
+      const boothScores = eligibleBooths.map((booth) => {
+        const queue = allVehicles.filter(
+          (other) =>
+            other.id !== vehicle.id &&
+            other.laneIndex === booth.id &&
+            other.state !== 'staged' &&
+            other.state !== 'departed' &&
+            other.state !== 'on_ferry'
+        );
+        const queueLength = queue.length;
+        const queuePoints = queue.reduce((sum, v) => sum + v.points, 0);
+        const isFull = queueLength >= booth.wipLimit;
+        const incidentPenalty = booth.incident ? 60 : 0;
+        const fullPenalty = isFull ? 30 : 0;
+        const hasFlatTireVehicle = queue.some((v) => v.hasFlatTire);
+        const flatTirePenalty = hasFlatTireVehicle ? 150 : 0;
 
-  // Helper to construct a newly spawned vehicle
-  const createSpawnedVehicle = useCallback((customPoints?: StoryPoint, specificLane?: number, existingVehicles?: VehicleStory[]): VehicleStory | null => {
-    if (stateRef.current.sprintSummary) return null;
+        const score = queueLength * 10 + queuePoints + incidentPenalty + fullPenalty + flatTirePenalty;
+
+        return {
+          boothId: booth.id,
+          score,
+          queueLength
+        };
+      });
+
+      // Sort by score ascending (shortest queue first)
+      boothScores.sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score;
+        // Tie-breaker: North stories prefer northern lanes (0, 1, 2)
+        // South cars prefer southern lanes (5, 4, 3)
+        return isNorth ? a.boothId - b.boothId : b.boothId - a.boothId;
+      });
+
+      return boothScores[0].boothId;
+    },
+    []
+  );
+
+  const assignVehicleToLane = useCallback(
+    (vehicle: VehicleStory, currentBooths: TollBooth[], currentVehicles?: VehicleStory[]) => {
+      return selectShortestTollLane(vehicle, currentBooths, currentVehicles);
+    },
+    [selectShortestTollLane]
+  );
+
+  // Spawn vehicle on highway (assigns to North or South one-way lane and routes to shortest toll lane)
+  const spawnVehicle = useCallback((customPoints?: StoryPoint, specificLane?: number) => {
+    if (stateRef.current.sprintSummary) return;
     const scenarioDef = stateRef.current.activeScenarioDef;
     let points: StoryPoint;
     if (customPoints) {
@@ -492,17 +558,21 @@ export function useGameEngine() {
     }
 
     const newVehicle = createVehicle(points);
-    const assignedLane = specificLane !== undefined ? specificLane : assignVehicleToLane(newVehicle, stateRef.current.booths);
-    newVehicle.laneIndex = assignedLane;
-    newVehicle.y = 237.5 - newVehicle.width / 2;
+    // Alternate or pick North / South one-way lane
+    const isNorth = Math.random() < 0.5;
+    newVehicle.feederLane = isNorth ? 'north' : 'south';
+    newVehicle.y = (isNorth ? 219.75 : 255.25) - newVehicle.width / 2;
 
-    const vList = existingVehicles || stateRef.current.vehicles;
-    const feederCars = vList.filter((v) => v.x < 65 && v.state !== 'departed' && v.state !== 'on_ferry');
+    const assignedLane = specificLane !== undefined ? specificLane : assignVehicleToLane(newVehicle, stateRef.current.booths, stateRef.current.vehicles);
+    newVehicle.laneIndex = assignedLane;
+
+    // Safety: ensure new vehicle starts safely behind any vehicle currently queued or moving on the same one-way feeder lane
+    const feederCars = stateRef.current.vehicles.filter((v) => v.x < -30 && v.feederLane === newVehicle.feederLane && v.state !== 'departed' && v.state !== 'on_ferry');
     if (feederCars.length > 0) {
       const minX = Math.min(...feederCars.map((v) => v.x));
-      newVehicle.x = Math.max(-360, Math.min(-180, minX - newVehicle.length - 22));
+      newVehicle.x = Math.max(-240, Math.min(-140, minX - newVehicle.length - 20));
     } else {
-      newVehicle.x = -200;
+      newVehicle.x = -150;
     }
 
     return newVehicle;
@@ -878,6 +948,7 @@ export function useGameEngine() {
       v.parkingSlotIndex = nextSlot;
       // Alternate across North (top) and South (bottom) bays
       const isNorth = nextSlot % 2 === 0;
+      v.feederLane = isNorth ? 'north' : 'south';
       const bayIndex = Math.floor(nextSlot / 2);
       const col = bayIndex % 3;
       const row = Math.floor(bayIndex / 3);
@@ -896,27 +967,13 @@ export function useGameEngine() {
 
     sound.playSprintCommit();
 
-    const currBooths = stateRef.current.booths;
+    // Track what was committed in the parking lot for this sprint
+    const committedPts = selected.reduce((sum, item) => sum + item.points, 0);
+    const committedCount = selected.length;
+    setCommittedParkingLotStats({ points: committedPts, count: committedCount });
+    stateRef.current.committedParkingLotStats = { points: committedPts, count: committedCount };
 
-    // Ensure game is actively running (speed >= 1)
-    if (stateRef.current.settings.gameSpeed <= 0) {
-      setSettings((s) => ({ ...s, gameSpeed: 1 }));
-      stateRef.current.settings.gameSpeed = 1;
-    }
-
-    // Set day phase to morning to start traffic flow immediately
-    setFerry((prev) => ({
-      ...prev,
-      dayPhase: 'morning',
-      dayTimeFormatted: '09:00 AM'
-    }));
-    stateRef.current.ferry = {
-      ...stateRef.current.ferry,
-      dayPhase: 'morning',
-      dayTimeFormatted: '09:00 AM'
-    };
-
-    // Stage committed vehicles into North and South parking lot bays
+    // Map selected backlog items into staged vehicles across North and South bays flanking the street
     let slotIndex = 0;
     const stagedVehicles: VehicleStory[] = selected.map((item) => {
       const v = createVehicle(item.points, item.title);
@@ -926,6 +983,7 @@ export function useGameEngine() {
       v.state = 'staged';
       v.parkingSlotIndex = slotIndex++;
       const isNorth = v.parkingSlotIndex % 2 === 0;
+      v.feederLane = isNorth ? 'north' : 'south';
       const bayIndex = Math.floor(v.parkingSlotIndex / 2);
       const col = bayIndex % 3;
       const row = Math.floor(bayIndex / 3);
@@ -958,7 +1016,9 @@ export function useGameEngine() {
 
       stagedVehicles.sort((a, b) => (a.parkingSlotIndex ?? 0) - (b.parkingSlotIndex ?? 0));
       const target = stagedVehicles[0];
-      const lane = assignVehicleToLane(target, stateRef.current.booths);
+      const isNorth = (target.parkingSlotIndex ?? 0) % 2 === 0;
+      target.feederLane = isNorth ? 'north' : 'south';
+      const lane = assignVehicleToLane(target, stateRef.current.booths, prev);
 
       sound.playClick();
       return prev.map((v) => {
@@ -966,9 +1026,10 @@ export function useGameEngine() {
           return {
             ...v,
             state: 'approaching',
+            feederLane: isNorth ? 'north' : 'south',
             laneIndex: lane,
-            x: -200,
-            y: 237.5 - v.width / 2
+            x: -150,
+            y: (isNorth ? 219.75 : 255.25) - v.width / 2
           };
         }
         return v;
@@ -976,7 +1037,7 @@ export function useGameEngine() {
     });
   }, [assignVehicleToLane]);
 
-  // Resolve a random incident / blocked lane event (flat tire, breakdown, etc.)
+  // Resolve a random booth incident / blocked lane event (gate jam, scanner crash, spill, etc.)
   const resolveBoothIncident = useCallback((boothId: number, useEmergencyFix: boolean = true) => {
     if (stateRef.current.sprintSummary) return;
     setBooths((prev) =>
@@ -996,6 +1057,32 @@ export function useGameEngine() {
           incident: null,
           timeSinceLastIncident: 0
         };
+      })
+    );
+  }, []);
+
+  // Resolve a flat tire on a story vehicle (roadside assistance tire service)
+  const resolveVehicleFlatTire = useCallback((vehicleId: string, useEmergencyFix: boolean = true) => {
+    if (stateRef.current.sprintSummary) return;
+    const fixCost = 15;
+    if (useEmergencyFix && stateRef.current.funds < fixCost) {
+      sound.playHonk();
+      return;
+    }
+    if (useEmergencyFix) {
+      setFunds((f) => Math.max(0, f - fixCost));
+    }
+    sound.playRepair();
+    setVehicles((prev) =>
+      prev.map((v) => {
+        if (v.id === vehicleId && v.hasFlatTire) {
+          return {
+            ...v,
+            hasFlatTire: false,
+            flatTireRemaining: 0
+          };
+        }
+        return v;
       })
     );
   }, []);
@@ -1155,11 +1242,77 @@ export function useGameEngine() {
       keyHighlights.push(`⏳ ${leftBehindCount} tickets (${leftBehindPoints} pts) carried over to Day #${currentFerry.dayNumber + 1}`);
     }
 
+    // Parking Lot Commitment vs Delivery Evaluation
+    const committedStats = stateRef.current.committedParkingLotStats || { points: 30, count: 6 };
+    const committedPoints = Math.max(1, committedStats.points);
+    const committedStoriesCount = committedStats.count;
+
+    const overDeliveredPoints = Math.max(0, deliveredPoints - committedPoints);
+    const underDeliveredPoints = Math.max(0, committedPoints - deliveredPoints);
+    const completionRate = Math.round((deliveredPoints / committedPoints) * 100);
+
+    // Over-delivery cash bonus: $35 per story point delivered over parking lot commitment
+    const bonusPerOverPoint = 35;
+    const overDeliveryBonus = overDeliveredPoints * bonusPerOverPoint;
+
+    // Capacity adjustment for next sprint:
+    // Scale capacity boost based on how many points were delivered over commitment
+    let capacityAdjustment = 0;
+    if (overDeliveredPoints >= 10) {
+      capacityAdjustment = 12;
+    } else if (overDeliveredPoints >= 6) {
+      capacityAdjustment = 8;
+    } else if (overDeliveredPoints >= 3) {
+      capacityAdjustment = 5;
+    } else if (overDeliveredPoints >= 1) {
+      capacityAdjustment = 2;
+    }
+
+    const currentCapacity = currentFerry.capacity;
+    const nextSprintCapacity = Math.min(100, currentCapacity + capacityAdjustment);
+
+    let evaluationStatus: ParkingLotCommitmentEvaluation['evaluationStatus'] = 'exact_match';
+    let evaluationNotes = '';
+
+    if (overDeliveredPoints > 0) {
+      evaluationStatus = 'over_delivered';
+      evaluationNotes = `Supercharged Velocity! Delivered ${deliveredPoints} pts vs ${committedPoints} pts committed in the parking lot (+${overDeliveredPoints} pts over commitment, ${completionRate}% execution). Earned +$${overDeliveryBonus.toLocaleString()} over-delivery bonus, and calibrated next sprint capacity by +${capacityAdjustment} pts (from ${currentCapacity} → ${nextSprintCapacity} pts)!`;
+    } else if (underDeliveredPoints > 0) {
+      evaluationStatus = 'under_delivered';
+      evaluationNotes = `Delivered ${deliveredPoints} of ${committedPoints} committed pts (${completionRate}% execution). ${underDeliveredPoints} points remained in the highway queue or parking bays. Next sprint capacity maintained at ${currentCapacity} pts to protect Little's Law lead time.`;
+    } else {
+      evaluationStatus = 'exact_match';
+      evaluationNotes = `Precision Batch Delivery! Delivered exactly 100% of committed parking lot stories (${deliveredPoints}/${committedPoints} pts) with perfect predictability and flow consistency!`;
+    }
+
+    const commitmentEvaluation: ParkingLotCommitmentEvaluation = {
+      committedPoints,
+      committedStoriesCount,
+      deliveredPoints,
+      deliveredStoriesCount: deliveredVehicles.length,
+      overDeliveredPoints,
+      underDeliveredPoints,
+      completionRate,
+      evaluationStatus,
+      bonusAwarded: overDeliveryBonus,
+      capacityAdjustment,
+      nextSprintCapacity,
+      evaluationNotes
+    };
+
+    if (overDeliveredPoints > 0) {
+      keyHighlights.push(`🎯 Parking Lot Evaluation: Shipped +${overDeliveredPoints} pts over commitment (${completionRate}% execution) -> Earned +$${overDeliveryBonus.toLocaleString()} bonus & +${capacityAdjustment} pts next sprint capacity!`);
+    } else if (deliveredPoints === committedPoints) {
+      keyHighlights.push(`🎯 Parking Lot Evaluation: Exact 100% commitment match (${deliveredPoints}/${committedPoints} pts delivered) -> Flawless sprint estimation accuracy!`);
+    } else {
+      keyHighlights.push(`🎯 Parking Lot Evaluation: Delivered ${deliveredPoints} of ${committedPoints} committed pts (${completionRate}% execution) with ${underDeliveredPoints} pts carryover`);
+    }
+
     // Daily Fiscal Settlement: Player only receives funding at the end of each day
     // Daily dues include paying tax on higher efficiency booths and upgrades
     const grossTollRevenue = stateRef.current.pendingDailyRevenue;
     const ferryDeliveryBonus = sprintBonusRevenue;
-    const totalGrossRevenue = grossTollRevenue + ferryDeliveryBonus;
+    const totalGrossRevenue = grossTollRevenue + ferryDeliveryBonus + overDeliveryBonus;
 
     const dues = calculateDailyDues(stateRef.current.booths, currentFerry);
     const netFundingAwarded = Math.max(0, totalGrossRevenue - dues.totalDailyDues);
@@ -1167,6 +1320,7 @@ export function useGameEngine() {
     const financialSettlement: DailyFinancialSettlement = {
       grossTollRevenue,
       ferryDeliveryBonus,
+      overDeliveryBonus,
       totalGrossRevenue,
       efficiencyTax: dues.efficiencyTax,
       automationDues: dues.automationDues,
@@ -1244,6 +1398,7 @@ export function useGameEngine() {
       grade,
       departureReason: reason,
       financialSettlement,
+      commitmentEvaluation,
       bottleneckLaneName: bottleneckBooth.name,
       bottleneckQueueCount: maxLaneQueue,
       largestStoryProcessed,
@@ -1261,9 +1416,10 @@ export function useGameEngine() {
     setSprintSummary(summary);
     setLastSprintSummary(summary);
 
-    // Update ferry state to departing
+    // Update ferry state to departing and calibrate capacity for upcoming sprint
     setFerry((prev) => ({
       ...prev,
+      capacity: nextSprintCapacity,
       state: 'departing',
       sailProgress: 0
     }));
@@ -1449,31 +1605,60 @@ export function useGameEngine() {
 
     if (stagedVehicles.length > 0 && currFerry.dayPhase !== 'planning') {
       const timeSinceLastParkingRelease = now - lastParkingReleaseTimeRef.current;
-      // Smooth, steady rollout so stories from sprint planning immediately flow over to the tolls!
-      const releaseInterval = isContinualFlow ? 750 : 1100;
-      const entryBlocked = workingVehicles.some(
-        (v) => v.state !== 'staged' && v.state !== 'departed' && v.state !== 'on_ferry' && Math.abs(v.x - (-200)) < 42
+      // Fast, smooth rollout so stories from sprint planning immediately flow over to the tolls!
+      const releaseInterval = isContinualFlow ? 550 : 850;
+      stagedVehicles.sort((a, b) => (a.parkingSlotIndex ?? 0) - (b.parkingSlotIndex ?? 0));
+
+      // Find the next staged story from North or South bay whose slipway into its one-way lane is unblocked
+      const nextVehicle = stagedVehicles.find((cand) => {
+        const candIsNorth = (cand.parkingSlotIndex ?? 0) % 2 === 0;
+        const candLane = candIsNorth ? 'north' : 'south';
+        const candLaneY = candIsNorth ? 219.75 : 255.25;
+        const isSlipwayBlocked = currVehicles.some(
+          (v) =>
+            (v.feederLane === candLane || Math.abs((v.y ?? 0) - candLaneY) < 18) &&
+            v.x > -165 &&
+            v.x < -90 &&
+            v.state !== 'staged' &&
+            v.state !== 'departed' &&
+            v.state !== 'on_ferry'
+        );
+        return !isSlipwayBlocked;
+      }) || stagedVehicles[0];
+
+      const isNorth = (nextVehicle.parkingSlotIndex ?? 0) % 2 === 0;
+      const targetFeederLane = isNorth ? 'north' : 'south';
+
+      const entryBlocked = currVehicles.some(
+        (v) =>
+          (v.feederLane === targetFeederLane || Math.abs((v.y ?? 0) - (isNorth ? 219.75 : 255.25)) < 18) &&
+          v.x > -165 &&
+          v.x < -90 &&
+          v.state !== 'staged' &&
+          v.state !== 'departed' &&
+          v.state !== 'on_ferry'
       );
 
       if (timeSinceLastParkingRelease > releaseInterval && !entryBlocked) {
         lastParkingReleaseTimeRef.current = now;
-        stagedVehicles.sort((a, b) => (a.parkingSlotIndex ?? 0) - (b.parkingSlotIndex ?? 0));
-        const nextVehicle = stagedVehicles[0];
-
-        const assignedLane = assignVehicleToLane(nextVehicle, currBooths);
+        nextVehicle.feederLane = targetFeederLane;
+        const assignedLane = assignVehicleToLane(nextVehicle, currBooths, currVehicles);
         sound.playClick();
-        workingVehicles = workingVehicles.map((v) => {
-          if (v.id === nextVehicle.id) {
-            return {
-              ...v,
-              state: 'approaching' as const,
-              laneIndex: assignedLane,
-              x: -200,
-              y: 237.5 - v.width / 2
-            };
-          }
-          return v;
-        });
+        setVehicles((prev) =>
+          prev.map((v) => {
+            if (v.id === nextVehicle.id) {
+              return {
+                ...v,
+                state: 'approaching',
+                feederLane: targetFeederLane,
+                laneIndex: assignedLane,
+                x: -150,
+                y: (isNorth ? 219.75 : 255.25) - v.width / 2
+              };
+            }
+            return v;
+          })
+        );
       }
     }
 
@@ -1529,7 +1714,7 @@ export function useGameEngine() {
     }
 
     // Continual Flow Starvation Prevention: If an unlocked booth has 0 incoming vehicles, feed it immediately!
-    if (isContinualFlow && workingVehicles.length < maxAllowedVehicles && now - stateRef.current.lastSpawnTime > 800) {
+    if (currFerry.dayPhase !== 'planning' && isContinualFlow && currVehicles.length < maxAllowedVehicles && now - stateRef.current.lastSpawnTime > 350) {
       const activeBooths = currBooths.filter((b) => b.unlocked);
       for (const b of activeBooths) {
         const laneLoad = workingVehicles.filter(
@@ -1669,9 +1854,22 @@ export function useGameEngine() {
     const updatedVehicles = workingVehicles.map((vehicle) => {
       const v = { ...vehicle };
 
+      // Ensure feederLane is set for tracking North vs South origin
+      if (!v.feederLane && v.state !== 'staged') {
+        const isNorth = (v.parkingSlotIndex !== undefined ? v.parkingSlotIndex % 2 === 0 : (v.y ?? 237.5) < 237.5);
+        v.feederLane = isNorth ? 'north' : 'south';
+      }
+
+      // Dynamic shortest lane choice: right when entering the ferry / toll plaza approach area,
+      // vehicles choose the shortest available toll lane in real time!
+      if (!v.hasChosenPlazaLane && v.state === 'approaching' && v.x >= -85 && v.x <= 40) {
+        v.hasChosenPlazaLane = true;
+        v.laneIndex = selectShortestTollLane(v, currBooths, currVehicles);
+      }
+
       // Lane assignment for approaching vehicles (do not assign to staged parking lot cars until dispatched)
       if (v.laneIndex === -1 && currSettings.autoAssignLanes && v.state !== 'staged') {
-        v.laneIndex = assignVehicleToLane(v, currBooths);
+        v.laneIndex = selectShortestTollLane(v, currBooths, currVehicles);
       }
 
       if (v.laneIndex >= 0 && (v.state === 'approaching' || v.state === 'queued' || v.state === 'processing')) {
@@ -1693,7 +1891,48 @@ export function useGameEngine() {
     });
 
     // Process each toll booth
-    const BOOTH_BARRIER_X = 315;
+    const BOOTH_BARRIER_X = 245;
+
+    // Process Vehicle Flat Tires: flat tires only happen to story vehicles where they are at!
+    timeSinceLastFlatTireRef.current += dt;
+
+    // 1. Countdown active vehicle flat tires
+    updatedVehicles.forEach((v) => {
+      if (v.hasFlatTire) {
+        v.flatTireRemaining = Math.max(0, (v.flatTireRemaining || 0) - dt);
+        if (v.flatTireRemaining <= 0) {
+          v.hasFlatTire = false;
+          v.flatTireRemaining = 0;
+          sound.playRepair();
+        }
+      }
+    });
+
+    // 2. Trigger random flat tire on an active story vehicle where it currently is located on the roadway
+    const activeVehiclesOnRoad = updatedVehicles.filter(
+      (v) =>
+        (v.state === 'approaching' || v.state === 'queued' || v.state === 'processing') &&
+        !v.hasFlatTire &&
+        v.x > -180 &&
+        v.x < 410
+    );
+    const flatTireVehicleCount = updatedVehicles.filter((v) => v.hasFlatTire).length;
+
+    if (
+      timeSinceLastFlatTireRef.current > 30 &&
+      flatTireVehicleCount < 2 &&
+      activeVehiclesOnRoad.length > 0 &&
+      currFerry.dayPhase !== 'planning' &&
+      !stateRef.current.sprintSummary
+    ) {
+      if (Math.random() < dt * 0.035) {
+        const victim = activeVehiclesOnRoad[Math.floor(Math.random() * activeVehiclesOnRoad.length)];
+        victim.hasFlatTire = true;
+        victim.flatTireRemaining = 15;
+        timeSinceLastFlatTireRef.current = 0;
+        sound.playFlatTire();
+      }
+    }
 
     updatedBooths.forEach((booth) => {
       if (!booth.unlocked) return;
@@ -1703,7 +1942,7 @@ export function useGameEngine() {
         booth.cooldownTimer = Math.max(0, booth.cooldownTimer - dt);
       }
 
-      // Handle random booth incidents / breakdowns (flat tires, gate jams, etc.)
+      // Handle random booth infrastructure incidents (gate jams, scanner crashes, spills, power loss)
       if (booth.incident) {
         booth.incident.remaining = Math.max(0, booth.incident.remaining - dt);
         if (booth.incident.remaining <= 0) {
@@ -1744,13 +1983,14 @@ export function useGameEngine() {
         (v) => v.laneIndex === booth.id && v.state === 'to_dock' && v.x < BOOTH_BARRIER_X + 45
       );
 
-      // If booth is idle, cooldown complete, no active incident, and front vehicle has reached the barrier stop line
+      // If booth is idle, cooldown complete, no active incident, and front vehicle has reached the barrier stop line (and has NO flat tire)
       if (
         !booth.isProcessing &&
         booth.currentVehicleId === null &&
         booth.cooldownTimer <= 0 &&
         booth.incident === null &&
         frontVehicle &&
+        !frontVehicle.hasFlatTire &&
         !hasClearingCar
       ) {
         const stopLine = BOOTH_BARRIER_X - frontVehicle.length;
@@ -1772,8 +2012,14 @@ export function useGameEngine() {
         }
       }
 
-      // If booth is currently processing
-      if (booth.isProcessing && booth.processingDuration > 0 && !booth.incident) {
+      // If booth is currently processing (pauses if vehicle has an active flat tire)
+      const currentProcessingVehicle = updatedVehicles.find((v) => v.id === booth.currentVehicleId);
+      if (
+        booth.isProcessing &&
+        booth.processingDuration > 0 &&
+        !booth.incident &&
+        (!currentProcessingVehicle || !currentProcessingVehicle.hasFlatTire)
+      ) {
         const progressIncrement = (dt / booth.processingDuration) * 100;
         booth.processingProgress = Math.min(100, booth.processingProgress + progressIncrement);
 
@@ -1854,7 +2100,8 @@ export function useGameEngine() {
       // Target Y when settled in assigned booth lane
       const assignedLane = v.laneIndex >= 0 && v.laneIndex < LANE_Y_POSITIONS.length ? v.laneIndex : 2;
       const targetLaneY = LANE_Y_POSITIONS[assignedLane] + (70 - v.width) / 2;
-      const FEEDER_Y = 237.5 - v.width / 2;
+      const isNorth = v.feederLane === 'north' || (v.parkingSlotIndex !== undefined && v.parkingSlotIndex % 2 === 0);
+      const FEEDER_Y = (isNorth ? 219.75 : 255.25) - v.width / 2;
 
       // Processing state: firmly anchored at barrier stop line
       if (v.state === 'processing') {
@@ -1886,17 +2133,17 @@ export function useGameEngine() {
           stopX = Math.min(stopX, laneStopX);
         }
 
-        // 2. Feeder and fan-out merge spacing: single file until paths diverge in Y
-        if (v.x < 130) {
+        // 2. Feeder spacing: single file within the same one-way lane (North or South)
+        if (v.x < -10) {
           const feederAhead = updatedVehicles.filter(
             (other) =>
               other.id !== v.id &&
               other.state !== 'staged' &&
               other.x > v.x &&
-              other.x < 160 &&
+              other.x < 25 &&
               other.state !== 'departed' &&
               other.state !== 'on_ferry' &&
-              Math.abs((other.y ?? FEEDER_Y) - (v.y ?? FEEDER_Y)) < 34
+              (other.feederLane ? other.feederLane === (isNorth ? 'north' : 'south') : Math.abs((other.y ?? FEEDER_Y) - (v.y ?? FEEDER_Y)) < 22)
           );
 
           if (feederAhead.length > 0) {
@@ -1911,7 +2158,10 @@ export function useGameEngine() {
 
         // 3. Smooth, anti-jitter deceleration towards stopX
         const dist = stopX - v.x;
-        if (dist <= 0) {
+        if (v.hasFlatTire) {
+          // Immobilized on the spot where the flat tire happened!
+          v.state = 'queued';
+        } else if (dist <= 0) {
           v.x = stopX;
           v.state = 'queued';
         } else {
@@ -1931,11 +2181,11 @@ export function useGameEngine() {
           }
         }
 
-        // Trajectory: Feeder lane (x < 40) -> Fan out S-curve (40..185) -> Settled in lane (185+)
-        if (v.x < 40) {
+        // Trajectory: Feeder lane (x < -80) -> Fan out S-curve (-80..50) -> Settled in lane (50+)
+        if (v.x < -80) {
           v.y = FEEDER_Y;
-        } else if (v.x < 185) {
-          const t = Math.max(0, Math.min(1, (v.x - 40) / 145));
+        } else if (v.x < 50) {
+          const t = Math.max(0, Math.min(1, (v.x - (-80)) / 130));
           const smoothT = t * t * (3 - 2 * t);
           v.y = FEEDER_Y + (targetLaneY - FEEDER_Y) * smoothT;
         } else {
@@ -1947,7 +2197,9 @@ export function useGameEngine() {
       if (v.state === 'to_dock') {
         v.y = targetLaneY;
 
-        if (currFerry.state === 'boarding') {
+        if (v.hasFlatTire) {
+          // Immobilized at current exit location!
+        } else if (currFerry.state === 'boarding') {
           // Check car ahead in the same exit lane to prevent overtaking
           const aheadInLane = updatedVehicles.filter(
             (other) =>
@@ -2071,8 +2323,8 @@ export function useGameEngine() {
           (v) =>
             v.laneIndex === b.id &&
             (v.state === 'processing' ||
-              (v.state === 'queued' && v.x >= 150) ||
-              (v.state === 'approaching' && v.x >= 180))
+              (v.state === 'queued' && v.x >= 80) ||
+              (v.state === 'approaching' && v.x >= 110))
         );
         const lanePoints = gateVehicles.reduce((sum, v) => sum + v.points, 0);
         if (lanePoints > maxQueuePoints) {
@@ -2475,7 +2727,7 @@ export function useGameEngine() {
       const v = createVehicle(pts);
       v.laneIndex = assignVehicleToLane(v, resetBooths);
       v.y = 237.5 - v.width / 2;
-      v.x = -60 - i * 42;
+      v.x = -20 - i * 35;
       initialCars.push(v);
     }
     setVehicles(initialCars);
@@ -2526,6 +2778,13 @@ export function useGameEngine() {
     }
     const freshScenarioBatch = preSelectOptimalBatch(scenarioBacklog, resetFerry.capacity);
     setBacklogItems(freshScenarioBatch);
+    const selScen = freshScenarioBatch.filter((b) => b.selected);
+    const initialScenCommitted = {
+      points: selScen.reduce((sum, i) => sum + i.points, 0),
+      count: selScen.length
+    };
+    setCommittedParkingLotStats(initialScenCommitted);
+    stateRef.current.committedParkingLotStats = initialScenCommitted;
 
     setIsScenarioSelectOpen(false);
     setIsScenarioOutcomeOpen(false);
@@ -2652,30 +2911,13 @@ export function useGameEngine() {
 
     const freshBacklog = preSelectOptimalBatch(generateDailyBacklog(1), INITIAL_FERRY.capacity);
     setBacklogItems(freshBacklog);
-
-    // Have the cars start at the parking lot right at initial free play launch
-    let slotIndex = 0;
-    const initialStagedVehicles: VehicleStory[] = freshBacklog
-      .filter((item) => item.selected)
-      .map((item) => {
-        const v = createVehicle(item.points, item.title);
-        v.id = item.id;
-        v.tollValue = item.businessValue;
-        v.type = item.type;
-        v.state = 'staged';
-        v.parkingSlotIndex = slotIndex++;
-        const isNorth = v.parkingSlotIndex % 2 === 0;
-        const bayIndex = Math.floor(v.parkingSlotIndex / 2);
-        const col = bayIndex % 3;
-        const row = Math.floor(bayIndex / 3);
-        v.x = -402 + col * 58;
-        v.y = isNorth ? 54 + row * 46 : 292 + row * 46;
-        v.laneIndex = -1;
-        return v;
-      });
-
-    setVehicles(initialStagedVehicles);
-    stateRef.current.vehicles = initialStagedVehicles;
+    const sel = freshBacklog.filter((b) => b.selected);
+    const initialCommitted = {
+      points: sel.reduce((sum, i) => sum + i.points, 0),
+      count: sel.length
+    };
+    setCommittedParkingLotStats(initialCommitted);
+    stateRef.current.committedParkingLotStats = initialCommitted;
 
     setHasStartedGame(true);
     setSettings((s) => ({ ...s, gameSpeed: 1 }));
@@ -2683,7 +2925,7 @@ export function useGameEngine() {
     setIsMainMenuOpen(false);
     // Present the parking lot screen first before starting the shift
     setIsSprintPlanningOpen(true);
-  }, [seasonNumber, currentShip.name, currentShip.shortTag, createVehicle]);
+  }, [seasonNumber, currentShip.name, currentShip.shortTag]);
 
   const dailyDues = useMemo(() => calculateDailyDues(booths, ferry), [booths, ferry]);
 
@@ -2721,6 +2963,7 @@ export function useGameEngine() {
     commitSprintPlanning,
     dispatchNextFromParkingLot,
     resolveBoothIncident,
+    resolveVehicleFlatTire,
     // Scenario Engine
     activeScenario,
     activeScenarioDef,

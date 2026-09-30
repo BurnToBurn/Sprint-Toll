@@ -10,9 +10,9 @@ interface IncidentTemplate {
 
 const INCIDENT_TEMPLATES: IncidentTemplate[] = [
   {
-    type: 'flat_tire',
-    title: 'Flat Tire Blockade',
-    description: 'A courier van suffered a blown tire right before the barrier. Lane is physically blocked!',
+    type: 'power_loss',
+    title: 'Auxiliary Power Trip',
+    description: 'Electrical breaker tripped; booth sensors and toll barrier are rebooting.',
     duration: 12,
     quickFixCost: 20
   },
