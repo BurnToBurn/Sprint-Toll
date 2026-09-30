@@ -98,28 +98,45 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   const stagedPoints = React.useMemo(() => stagedVehicles.reduce((sum, v) => sum + v.points, 0), [stagedVehicles]);
   const activeIncidents = React.useMemo(() => booths.filter((b) => b.unlocked && b.incident !== null), [booths]);
 
-  // Identify significant bottleneck booth
+  // Identify significant bottleneck booth (only triggers after cars reach the toll gate)
   const primaryBottleneck = React.useMemo<{ booth: TollBooth; queue: VehicleStory[]; points: number } | null>(() => {
     let worst: { booth: TollBooth; queue: VehicleStory[]; points: number } | null = null;
     booths.forEach((b) => {
       if (!b.unlocked) return;
+
+      // Has at least one vehicle reached the toll gate in this lane?
+      const hasReachedTollGate =
+        b.isProcessing ||
+        b.currentVehicleId !== null ||
+        vehicles.some(
+          (v) =>
+            v.laneIndex === b.id &&
+            (v.state === 'processing' || (v.state === 'queued' && v.x >= 240) || v.x >= 250)
+        );
+
+      if (!hasReachedTollGate) return;
+
+      // Queue of vehicles that have reached the toll gate area
       const q = vehicles.filter(
-        (v) => v.laneIndex === b.id && (v.state === 'queued' || v.state === 'approaching' || v.state === 'processing')
+        (v) =>
+          v.laneIndex === b.id &&
+          (v.state === 'processing' ||
+            (v.state === 'queued' && v.x >= 150) ||
+            (v.state === 'approaching' && v.x >= 180))
       );
       const pts = q.reduce((sum, v) => sum + v.points, 0);
 
       const isBottleneck =
         (q.length >= b.wipLimit && q.length >= 2) ||
         q.length >= 3 ||
-        pts >= 12 ||
-        (metrics && metrics.bottleneckLaneIndex === b.id && q.length >= 2);
+        pts >= 12;
 
       if (isBottleneck && (!worst || pts > worst.points)) {
         worst = { booth: b, queue: q, points: pts };
       }
     });
     return worst;
-  }, [booths, vehicles, metrics]);
+  }, [booths, vehicles]);
 
   return (
     <div className="relative w-full h-[800px] sm:h-[840px] lg:h-[880px] min-h-[720px] bg-[#2B2F38] border-[3px] border-[#1E222A] rounded-3xl overflow-hidden shadow-[0_8px_0_#1E222A] flex flex-col select-none">
@@ -328,6 +345,12 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               <rect x="8" width="8" height="16" fill="#000000" opacity="0.1" />
             </pattern>
 
+            {/* Toll Island Chevron Warning Pattern */}
+            <pattern id="islandChevron" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+              <rect width="4" height="8" fill="#FFD200" />
+              <rect x="4" width="4" height="8" fill="#1E222A" />
+            </pattern>
+
             {/* Drop Shadow Filter */}
             <filter id="carShadow" x="-20%" y="-20%" width="140%" height="140%">
               <feDropShadow dx="1" dy="3" stdDeviation="3" floodOpacity="0.45" />
@@ -450,7 +473,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
             {/* Tarmac connector slipway from North lot down into the central street */}
             <path
-              d="M -218 135 C -170 135, -170 202, -120 202 L 45 202 L 45 273 L -412 273 L -412 202 L -218 202 Z"
+              d="M -218 135 C -170 135, -170 202, -120 202 L -218 202 Z"
               fill="#0b1324"
               stroke="#334155"
               strokeWidth="1.5"
@@ -530,7 +553,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
             {/* Tarmac connector slipway from South lot up into the central street */}
             <path
-              d="M -218 375 C -170 375, -170 273, -120 273 L 45 273 L 45 202 L -412 202 L -412 273 L -218 273 Z"
+              d="M -218 375 C -170 375, -170 273, -120 273 L -218 273 Z"
               fill="#0b1324"
               stroke="#334155"
               strokeWidth="1.5"
@@ -547,30 +570,101 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             />
           </g>
 
-          {/* CENTRAL STREET (Between North & South Bays, y = 202..273, center 237.5) */}
-          <line x1="-412" y1="202" x2="45" y2="202" stroke="#e2e8f0" strokeWidth="2.5" />
-          <line x1="-412" y1="273" x2="45" y2="273" stroke="#e2e8f0" strokeWidth="2.5" />
-          <line x1="-412" y1="237.5" x2="45" y2="237.5" stroke="#eab308" strokeWidth="2" strokeDasharray="8 6" />
+          {/* MAIN HIGHWAY ROADWAY EXTENDING TO TOLL GATES & PIER */}
+          <g id="main-road-system">
+            {/* Solid Paved Roadway Surface extending from intake through fan-out and all 6 toll gates to the dock */}
+            <path
+              d="M -412 202 L 45 202 C 105 202, 130 46, 195 46 L 415 46 L 415 499 L 195 499 C 130 499, 105 273, 45 273 L -412 273 Z"
+              fill="#0d121c"
+              stroke="#1e293b"
+              strokeWidth="1.5"
+            />
 
-          {/* Animated Directional Road Flow Arrows pointing east from both bays towards the tolls */}
-          <g opacity="0.85">
-            <path d="M -190 234 L -184 237.5 L -190 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M -150 234 L -144 237.5 L -150 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M -110 234 L -104 237.5 L -110 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M -70 234 L -64 237.5 L -70 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M -30 234 L -24 237.5 L -30 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M 10 234 L 16 237.5 L 10 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-          </g>
-          <text x="-95" y="226" fill="#eab308" fontSize="8" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.2">
-            DUAL-BAY STAGING · FLOW OVER TO TOLL PLAZA →
-          </text>
+            {/* Heavy Concrete Road Curbs with high-visibility reflective markers along both edges */}
+            {/* North Road Curb */}
+            <path
+              d="M -412 199 L 45 199 C 105 199, 130 43, 195 43 L 415 43"
+              fill="none"
+              stroke="#334155"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M -412 199 L 45 199 C 105 199, 130 43, 195 43 L 415 43"
+              fill="none"
+              stroke="#94a3b8"
+              strokeWidth="2"
+              strokeDasharray="16 16"
+            />
+            <path
+              d="M -412 202 L 45 202 C 105 202, 130 46, 195 46 L 415 46"
+              fill="none"
+              stroke="#f8fafc"
+              strokeWidth="2.5"
+            />
 
-          {/* Feeder Overhead Road Sign / Marker */}
-          <g transform="translate(-160, 168)">
-            <rect width="96" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
-            <text x="48" y="14" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
-              HIGHWAY INTAKE · ARTERIAL
+            {/* South Road Curb */}
+            <path
+              d="M -412 276 L 45 276 C 105 276, 130 502, 195 502 L 415 502"
+              fill="none"
+              stroke="#334155"
+              strokeWidth="6"
+              strokeLinecap="round"
+            />
+            <path
+              d="M -412 276 L 45 276 C 105 276, 130 502, 195 502 L 415 502"
+              fill="none"
+              stroke="#94a3b8"
+              strokeWidth="2"
+              strokeDasharray="16 16"
+            />
+            <path
+              d="M -412 273 L 45 273 C 105 273, 130 499, 195 499 L 415 499"
+              fill="none"
+              stroke="#f8fafc"
+              strokeWidth="2.5"
+            />
+
+            {/* Central Intake Double-Yellow Centerline (x = -412 to 45) */}
+            <line x1="-412" y1="236" x2="45" y2="236" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
+            <line x1="-412" y1="239" x2="45" y2="239" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
+
+            {/* Animated Directional Road Flow Arrows pointing east from both bays towards the tolls */}
+            <g opacity="0.85">
+              <path d="M -190 234 L -184 237.5 L -190 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -150 234 L -144 237.5 L -150 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -110 234 L -104 237.5 L -110 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -70 234 L -64 237.5 L -70 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -30 234 L -24 237.5 L -30 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M 10 234 L 16 237.5 L 10 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </g>
+            <text x="-95" y="226" fill="#eab308" fontSize="8" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.2">
+              DUAL-BAY STAGING · FLOW OVER TO TOLL PLAZA →
             </text>
+
+            {/* Feeder Overhead Road Sign / Marker */}
+            <g transform="translate(-160, 168)">
+              <rect width="96" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
+              <text x="48" y="14" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
+                HIGHWAY INTAKE · ARTERIAL
+              </text>
+            </g>
+
+            {/* Fan-Out Plaza Apron Road Markings (x = 45 to 195) */}
+            <text x="110" y="224" fill="#475569" fontSize="7.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.5" textAnchor="middle">
+              TOLL PLAZA APPROACH · SELECT LANE
+            </text>
+
+            {/* Concrete Lane Dividers separating all 6 lanes from fan-out (x=195) to toll gates (x=300) */}
+            {[122.5, 197.5, 272.5, 347.5, 422.5].map((sepY) => (
+              <g key={'lane-sep-' + sepY}>
+                <line x1="195" y1={sepY} x2="300" y2={sepY} stroke="#334155" strokeWidth="4" />
+                <line x1="195" y1={sepY} x2="300" y2={sepY} stroke="#f8fafc" strokeWidth="1.5" strokeDasharray="14 10" />
+                {/* Continuation after toll gates to dock (x=336 to 415) */}
+                <line x1="336" y1={sepY} x2="415" y2={sepY} stroke="#334155" strokeWidth="3" />
+                <line x1="336" y1={sepY} x2="415" y2={sepY} stroke="#64748b" strokeWidth="1" strokeDasharray="8 8" />
+              </g>
+            ))}
           </g>
 
           {/* Fan-Out Plaza Transition Zone (x=45 to 195) Curved Guide Tracks */}
@@ -611,34 +705,150 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             const laneY = LANE_Y_POSITIONS[idx];
             const isUnlocked = booth.unlocked;
 
-            // Lane queue count
+            // Has at least one vehicle reached the toll gate in this lane?
+            const hasCarsReachedGate =
+              booth.isProcessing ||
+              booth.currentVehicleId !== null ||
+              vehicles.some(
+                (v) =>
+                  v.laneIndex === booth.id &&
+                  (v.state === 'processing' || (v.state === 'queued' && v.x >= 240) || v.x >= 250)
+              );
+
+            // Queue of vehicles that have reached the toll gate area
             const laneQueue = vehicles.filter(
-              (v) => v.laneIndex === booth.id && (v.state === 'queued' || v.state === 'approaching' || v.state === 'processing')
+              (v) =>
+                v.laneIndex === booth.id &&
+                (v.state === 'processing' ||
+                  (v.state === 'queued' && v.x >= 150) ||
+                  (v.state === 'approaching' && v.x >= 180))
             );
             const lanePoints = laneQueue.reduce((acc, v) => acc + v.points, 0);
-            const isAtWipLimit = laneQueue.length >= booth.wipLimit;
-            const hasHeavyVehicle = laneQueue.some((v) => v.points >= 8);
+            const isAtWipLimit = isUnlocked && hasCarsReachedGate && laneQueue.length >= booth.wipLimit;
+            const hasHeavyVehicle = isUnlocked && hasCarsReachedGate && laneQueue.some((v) => v.points >= 8);
 
-            // Severe bottleneck condition: queue accumulation exceeding limits or causing severe delays
+            // Severe bottleneck condition: ONLY shows up after cars have reached the toll gate
             const isSevereBottleneck =
               isUnlocked &&
+              hasCarsReachedGate &&
               ((laneQueue.length >= booth.wipLimit && laneQueue.length >= 2) ||
                 laneQueue.length >= 3 ||
-                lanePoints >= 12 ||
-                (metrics && metrics.bottleneckLaneIndex === booth.id && laneQueue.length >= 2));
+                lanePoints >= 12);
 
             return (
               <g key={booth.id} className="transition-opacity duration-300">
-                {/* Lane road surface and divider lines (from fan-out boundary x=195 to toll booth x=300) */}
+                {/* Lane asphalt surface leading directly to the toll gates (x=195 to 300) */}
+                <rect
+                  x="195"
+                  y={laneY}
+                  width="105"
+                  height={LANE_HEIGHT}
+                  fill="#0e131d"
+                  stroke="#1e293b"
+                  strokeWidth="0.5"
+                />
+
+                {/* Painted Lane Centerline reaching the toll gate */}
                 <line
                   x1="195"
                   y1={laneY + LANE_HEIGHT / 2}
-                  x2="300"
+                  x2="278"
+                  y2={laneY + LANE_HEIGHT / 2}
+                  stroke={isUnlocked ? '#64748b' : '#334155'}
+                  strokeWidth="1.5"
+                  strokeDasharray="8 8"
+                />
+
+                {/* Painted Road Asphalt Stencils (Lane Number & Directional Arrow) */}
+                {isUnlocked && (
+                  <g opacity="0.75">
+                    <text
+                      x="206"
+                      y={laneY + LANE_HEIGHT / 2 + 3}
+                      fill="#475569"
+                      fontSize="8.5"
+                      fontWeight="bold"
+                      fontFamily="var(--font-mono)"
+                    >
+                      L{idx + 1}
+                    </text>
+                    {/* Directional Guide Arrow on asphalt pointing to gate */}
+                    <path
+                      d={`M 235 ${laneY + LANE_HEIGHT / 2} L 246 ${laneY + LANE_HEIGHT / 2} M 241 ${laneY + LANE_HEIGHT / 2 - 3} L 246 ${laneY + LANE_HEIGHT / 2} L 241 ${laneY + LANE_HEIGHT / 2 + 3}`}
+                      fill="none"
+                      stroke="#64748b"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
+                  </g>
+                )}
+
+                {/* Road Stop Line Bar right before the toll gate island base (x=296) */}
+                <line
+                  x1="296"
+                  y1={laneY + 4}
+                  x2="296"
+                  y2={laneY + LANE_HEIGHT - 4}
+                  stroke="#ffffff"
+                  strokeWidth="3.5"
+                />
+                <text
+                  x="281"
+                  y={laneY + 42}
+                  fill="#94a3b8"
+                  fontSize="7"
+                  fontWeight="bold"
+                  fontFamily="var(--font-mono)"
+                  letterSpacing="0.6"
+                >
+                  STOP
+                </text>
+
+                {/* Concrete Approach Nose Chevron Hazard Stripes (x=292 to 300) */}
+                <polygon
+                  points={`292,${laneY + 12} 300,${laneY - 4} 300,${laneY + 28}`}
+                  fill="url(#islandChevron)"
+                  stroke="#1e222a"
+                  strokeWidth="0.5"
+                />
+                <polygon
+                  points={`292,${laneY + LANE_HEIGHT - 12} 300,${laneY + LANE_HEIGHT - 28} 300,${laneY + LANE_HEIGHT + 4}`}
+                  fill="url(#islandChevron)"
+                  stroke="#1e222a"
+                  strokeWidth="0.5"
+                />
+
+                {/* Post-gate Road Surface connecting toll gate to the dock (x=336 to 415) */}
+                <rect
+                  x="336"
+                  y={laneY}
+                  width="79"
+                  height={LANE_HEIGHT}
+                  fill="#0b0f17"
+                  stroke="#1e293b"
+                  strokeWidth="0.5"
+                />
+                <line
+                  x1="336"
+                  y1={laneY + LANE_HEIGHT / 2}
+                  x2="415"
                   y2={laneY + LANE_HEIGHT / 2}
                   stroke="#334155"
                   strokeWidth="1"
-                  strokeDasharray="10 10"
+                  strokeDasharray="6 6"
                 />
+                {isUnlocked && (
+                  <path
+                    d={`M 372 ${laneY + LANE_HEIGHT / 2} L 388 ${laneY + LANE_HEIGHT / 2} M 382 ${laneY + LANE_HEIGHT / 2 - 3} L 388 ${laneY + LANE_HEIGHT / 2} L 382 ${laneY + LANE_HEIGHT / 2 + 3}`}
+                    fill="none"
+                    stroke="#10b981"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    opacity="0.65"
+                  />
+                )}
 
                 {/* Locked lane overlay (from x=195 to pier x=415) */}
                 {!isUnlocked && (
@@ -753,9 +963,9 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     {isSevereBottleneck && !booth.incident && (
                       <g className="animate-pulse">
                         <rect
-                          x="35"
+                          x="95"
                           y={laneY + 4}
-                          width="265"
+                          width="201"
                           height={LANE_HEIGHT - 8}
                           rx="6"
                           fill="url(#hazardStripes)"
@@ -769,9 +979,9 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                           onClick={() => setSelectedViolationBooth(booth)}
                         >
                           <rect
-                            x="45"
+                            x="105"
                             y={laneY + 12}
-                            width="240"
+                            width="186"
                             height="19"
                             rx="4"
                             fill="#450a0a"
@@ -780,14 +990,15 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             className="group-hover:fill-rose-900 transition-colors"
                           />
                           <text
-                            x="52"
+                            x="198"
                             y={laneY + 25}
                             fill="#fecdd3"
                             fontSize="8"
                             fontWeight="bold"
                             fontFamily="var(--font-mono)"
+                            textAnchor="middle"
                           >
-                            🚨 FLOW BOTTLENECK ({laneQueue.length}/{booth.wipLimit}) · CLICK FOR PRINCIPLES
+                            🚨 FLOW BOTTLENECK ({laneQueue.length}/{booth.wipLimit}) · PRINCIPLES
                           </text>
                         </g>
                       </g>
@@ -797,15 +1008,15 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     {isAtWipLimit && !isSevereBottleneck && (
                       <g className="animate-pulse">
                         <rect
-                          x="30"
+                          x="115"
                           y={laneY + 8}
-                          width="240"
-                          height="54"
+                          width="180"
+                          height={54}
                           rx="6"
                           fill="#ef4444"
                           opacity="0.12"
                         />
-                        <text x="40" y={laneY + 24} fill="#fca5a5" fontSize="9" fontWeight="bold" fontFamily="var(--font-mono)">
+                        <text x="125" y={laneY + 24} fill="#fca5a5" fontSize="8.5" fontWeight="bold" fontFamily="var(--font-mono)">
                           ▲ WIP LIMIT REACHED ({laneQueue.length}/{booth.wipLimit})
                         </text>
                       </g>
@@ -1051,11 +1262,19 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
           })}
 
           {/* 3. DOCK MERGE ARROWS & RAMP */}
-          <g opacity="0.6">
-            <line x1="365" y1="260" x2="410" y2="260" stroke="#475569" strokeWidth="2" strokeDasharray="4 4" />
-            <polygon points="405,256 415,260 405,264" fill="#94a3b8" />
-            <text x="368" y="248" fill="#94a3b8" fontSize="8" fontWeight="bold" letterSpacing="0.5">
-              DOCK →
+          <g>
+            {/* Visual Dock Entrance Asphalt Ramp connecting road lanes into ferry berth */}
+            <path
+              d="M 405 180 L 450 180 L 450 320 L 405 320 Z"
+              fill="#18202c"
+              stroke="#334155"
+              strokeWidth="1.5"
+              opacity="0.8"
+            />
+            <line x1="365" y1="250" x2="445" y2="250" stroke="#f59e0b" strokeWidth="2" strokeDasharray="6 4" />
+            <polygon points="440,246 450,250 440,254" fill="#f59e0b" />
+            <text x="375" y="242" fill="#cbd5e1" fontSize="8" fontWeight="bold" letterSpacing="0.8" fontFamily="var(--font-mono)">
+              FERRY BERTH RAMP →
             </text>
           </g>
 

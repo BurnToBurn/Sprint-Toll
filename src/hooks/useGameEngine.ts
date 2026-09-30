@@ -1919,13 +1919,19 @@ export function useGameEngine() {
       const currentWIP = activeWipVehicles.length;
       const wipPoints = activeWipVehicles.reduce((sum, v) => sum + v.points, 0);
 
-      // Find bottleneck lane (lane with highest queued points)
+      // Find bottleneck lane (lane with highest queued points among vehicles that reached the toll gate)
       let maxQueuePoints = 0;
-      let bottleneckIndex = 0;
+      let bottleneckIndex = -1;
       currBooths.forEach((b) => {
-        const lanePoints = activeWipVehicles
-          .filter((v) => v.laneIndex === b.id)
-          .reduce((sum, v) => sum + v.points, 0);
+        if (!b.unlocked) return;
+        const gateVehicles = activeWipVehicles.filter(
+          (v) =>
+            v.laneIndex === b.id &&
+            (v.state === 'processing' ||
+              (v.state === 'queued' && v.x >= 150) ||
+              (v.state === 'approaching' && v.x >= 180))
+        );
+        const lanePoints = gateVehicles.reduce((sum, v) => sum + v.points, 0);
         if (lanePoints > maxQueuePoints) {
           maxQueuePoints = lanePoints;
           bottleneckIndex = b.id;
