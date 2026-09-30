@@ -82,6 +82,7 @@ export default function App() {
     toggleContinuousFlowMode,
     spawnVehicle,
     sliceStory,
+    sliceStoriesInLane,
     launchFerry,
     unlockBooth,
     upgradeBoothEfficiency,
@@ -191,6 +192,7 @@ export default function App() {
                 setIsUpgradesOpen(true);
               }}
               onSliceStory={sliceStory}
+              onSliceAllStoriesInLane={sliceStoriesInLane}
               onUnlockBooth={unlockBooth}
               onLaunchFerry={launchFerry}
               onUpgradeEfficiency={upgradeBoothEfficiency}

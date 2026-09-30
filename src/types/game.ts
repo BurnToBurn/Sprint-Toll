@@ -43,6 +43,7 @@ export interface BacklogItem {
   description?: string;
   selected: boolean;
   isCarryover?: boolean;
+  isLocked?: boolean;
 }
 
 export interface SprintPlan {

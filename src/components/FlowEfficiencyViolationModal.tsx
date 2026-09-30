@@ -23,6 +23,7 @@ interface FlowEfficiencyViolationModalProps {
   funds: number;
   onClose: () => void;
   onSliceStory: (vehicleId: string) => void;
+  onSliceAllStoriesInLane?: (laneIndex: number) => void;
   onUpgradeEfficiency?: (boothId: number) => void;
   onUpgradeAutomation?: (boothId: number) => void;
   onSetWipLimit?: (boothId: number, limit: number) => void;
@@ -35,15 +36,20 @@ export const FlowEfficiencyViolationModal: React.FC<FlowEfficiencyViolationModal
   funds,
   onClose,
   onSliceStory,
+  onSliceAllStoriesInLane,
   onUpgradeEfficiency,
   onUpgradeAutomation,
   onSetWipLimit
 }) => {
+  const [justSliced, setJustSliced] = React.useState(false);
+
   if (!booth) return null;
 
-  // Filter vehicles currently waiting or processing in this lane
+  // Filter vehicles currently waiting or processing in this lane (including approaching vehicles)
   const queueVehicles = laneVehicles.filter(
-    (v) => v.laneIndex === booth.id && (v.state === 'queued' || v.state === 'processing')
+    (v) =>
+      v.laneIndex === booth.id &&
+      (v.state === 'queued' || v.state === 'processing' || v.state === 'approaching')
   );
 
   const queuedPoints = queueVehicles.reduce((sum, v) => sum + v.points, 0);
@@ -230,40 +236,97 @@ export const FlowEfficiencyViolationModal: React.FC<FlowEfficiencyViolationModal
           </h4>
 
           {/* Action 1: Slice queued stories */}
-          {sliceableStories.length > 0 && (
-            <div className="p-3.5 rounded-2xl bg-[#FFD200]/20 border-2 border-[#FFD200] space-y-2">
-              <div className="flex items-center justify-between">
+          {sliceableStories.length > 0 ? (
+            <div className="p-3.5 rounded-2xl bg-[#FFD200]/20 border-2 border-[#FFD200] space-y-3 shadow-sm">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div className="flex items-center gap-2">
                   <Scissors className="w-4 h-4 text-[#E85D04]" />
                   <span className="text-xs font-black text-[#1E222A]" style={{ fontFamily: 'var(--font-heading)' }}>
-                    Slice Large Stories in This Queue (Immediate Relief)
+                    Batch Size Decomposition
+                  </span>
+                  <span className="text-[10px] font-mono font-black text-[#E85D04] bg-white px-2 py-0.5 rounded-lg border border-[#1E222A]">
+                    {sliceableStories.length} eligible
                   </span>
                 </div>
-                <span className="text-[10px] font-mono font-black text-[#E85D04] bg-white px-2 py-0.5 rounded-lg border border-[#1E222A]">
-                  {sliceableStories.length} eligible
-                </span>
+
+                {/* Primary Action Button: Slice all large stories in this queue */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (onSliceAllStoriesInLane) {
+                      onSliceAllStoriesInLane(booth.id);
+                    } else {
+                      sliceableStories.forEach((v) => onSliceStory(v.id));
+                    }
+                    setJustSliced(true);
+                    setTimeout(() => setJustSliced(false), 2400);
+                  }}
+                  className="px-4 py-2 rounded-xl bg-[#E85D04] hover:bg-[#d05303] text-white text-xs font-black flex items-center justify-center gap-2 cursor-pointer transition-all shadow-[0_3px_0_#1E222A] active:translate-y-0.5 active:shadow-none border-2 border-[#1E222A] shrink-0"
+                  style={{ fontFamily: 'var(--font-heading)' }}
+                  title="Slice all large stories in this queue into smaller lean batches"
+                >
+                  <Scissors className="w-3.5 h-3.5" />
+                  <span>Slice Large Stories in This Queue</span>
+                  <span className="bg-black/25 px-1.5 py-0.5 rounded text-[10px] font-mono text-[#FFD200]">
+                    ({sliceableStories.length})
+                  </span>
+                </button>
               </div>
+
               <p className="text-[11px] text-slate-700 font-semibold">
                 Smaller batch sizes travel faster through toll barriers and distribute more evenly across lanes.
               </p>
-              <div className="flex flex-wrap gap-2 pt-1">
-                {sliceableStories.slice(0, 3).map((v) => (
-                  <button
-                    key={v.id}
-                    onClick={() => onSliceStory(v.id)}
-                    className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border-2 border-[#1E222A] text-[#1E222A] text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
-                    style={{ fontFamily: 'var(--font-heading)' }}
-                  >
-                    <span
-                      className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white font-mono border border-[#1E222A]"
-                      style={{ backgroundColor: v.color }}
+
+              {/* Individual story decomposition options */}
+              <div className="space-y-1.5 pt-1">
+                <div className="text-[10px] font-bold text-slate-600 uppercase tracking-wider font-mono">
+                  Or slice tickets individually:
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {sliceableStories.map((v) => (
+                    <button
+                      key={v.id}
+                      type="button"
+                      onClick={() => {
+                        onSliceStory(v.id);
+                        setJustSliced(true);
+                        setTimeout(() => setJustSliced(false), 1800);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border-2 border-[#1E222A] text-[#1E222A] text-xs font-black flex items-center gap-1.5 cursor-pointer transition-all shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none group"
+                      style={{ fontFamily: 'var(--font-heading)' }}
+                      title={`Click to slice this ${v.points}pt story into smaller tickets`}
                     >
-                      {v.points}
-                    </span>
-                    <span className="truncate max-w-[120px]">{v.title}</span>
-                    <span className="text-[10px] text-[#E85D04]">&rarr; Slice</span>
-                  </button>
-                ))}
+                      <span
+                        className="w-4 h-4 rounded-full flex items-center justify-center text-[10px] text-white font-mono border border-[#1E222A]"
+                        style={{ backgroundColor: v.color }}
+                      >
+                        {v.points}
+                      </span>
+                      <span className="truncate max-w-[130px]">{v.title}</span>
+                      <span className="text-[10px] text-[#E85D04] font-black group-hover:scale-110 transition-transform">
+                        ✂️ Slice ({v.points === 3 ? '1+2' : v.points === 5 ? '2+3' : v.points === 8 ? '3+5' : v.points === 13 ? '5+5+3' : '8+8+5'} pts)
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {justSliced && (
+                <div className="p-2 rounded-xl bg-emerald-500 text-white font-black text-xs flex items-center gap-2 animate-fadeIn border border-[#1E222A]">
+                  <CheckCircle2 className="w-4 h-4" />
+                  <span>Stories sliced into agile, lean batches! Processing speed restored.</span>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-2xl bg-emerald-50 border-2 border-emerald-300 flex items-center justify-between text-xs text-emerald-900 font-bold">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                <span>
+                  {justSliced
+                    ? '✨ Stories successfully sliced into small batches! Queue is now lean.'
+                    : 'All stories in this lane are already lean (1-2 pts). Upgrade station power below to clear the queue faster.'}
+                </span>
               </div>
             </div>
           )}
