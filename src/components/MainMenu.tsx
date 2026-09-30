@@ -732,7 +732,7 @@ export const MainMenu: React.FC<MainMenuProps> = ({
                         style={{ fontFamily: 'var(--font-heading)' }}
                       >
                         <Play className="w-3.5 h-3.5 fill-current" />
-                        <span>Launch Mission</span>
+                        <span>Start Challenge</span>
                       </button>
                     </div>
                   </div>

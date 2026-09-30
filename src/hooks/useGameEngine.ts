@@ -363,6 +363,7 @@ export function useGameEngine() {
     vehicles,
     settings,
     isMainMenuOpen: true,
+    isSprintPlanningOpen: false,
     hasStartedGame: false,
     sprintSummary: null as SprintSummary | null,
     activeScenario: null as ActiveScenarioState | null,
@@ -385,8 +386,9 @@ export function useGameEngine() {
     stateRef.current.activeScenario = activeScenario;
     stateRef.current.activeScenarioDef = activeScenarioDef;
     stateRef.current.isMainMenuOpen = isMainMenuOpen;
+    stateRef.current.isSprintPlanningOpen = isSprintPlanningOpen;
     stateRef.current.hasStartedGame = hasStartedGame;
-  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, hasStartedGame]);
+  }, [funds, pendingDailyRevenue, booths, ferry, vehicles, settings, sprintSummary, activeScenario, activeScenarioDef, isMainMenuOpen, isSprintPlanningOpen, hasStartedGame]);
 
   // Synchronize season changes to localStorage and ferry state
   useEffect(() => {
@@ -1270,8 +1272,13 @@ export function useGameEngine() {
       const deltaSec = Math.min((now - lastTick) / 1000, 0.1) * stateRef.current.settings.gameSpeed;
       lastTick = now;
 
-      // When sprint retro or main menu is present on the screen, pause all simulation actions and motion
-      if (stateRef.current.settings.gameSpeed > 0 && !stateRef.current.sprintSummary && !stateRef.current.isMainMenuOpen) {
+      // When sprint retro, main menu, or parking lot staging is present on the screen, pause simulation actions and motion
+      if (
+        stateRef.current.settings.gameSpeed > 0 &&
+        !stateRef.current.sprintSummary &&
+        !stateRef.current.isMainMenuOpen &&
+        !stateRef.current.isSprintPlanningOpen
+      ) {
         updateSimulation(deltaSec);
       }
 
@@ -1389,7 +1396,7 @@ export function useGameEngine() {
     }
 
     // Continual Flow Starvation Prevention: If an unlocked booth has 0 incoming vehicles, feed it immediately!
-    if (isContinualFlow && currVehicles.length < maxAllowedVehicles && now - stateRef.current.lastSpawnTime > 350) {
+    if (currFerry.dayPhase !== 'planning' && isContinualFlow && currVehicles.length < maxAllowedVehicles && now - stateRef.current.lastSpawnTime > 350) {
       const activeBooths = currBooths.filter((b) => b.unlocked);
       for (const b of activeBooths) {
         const laneLoad = currVehicles.filter(
@@ -2301,7 +2308,7 @@ export function useGameEngine() {
     setBooths(resetBooths);
     stateRef.current.booths = resetBooths;
 
-    // Reset ferry to Day 1 morning
+    // Reset ferry to Day 1 planning phase
     const resetFerry: FerryDock = {
       ...INITIAL_FERRY,
       seasonNumber,
@@ -2309,8 +2316,8 @@ export function useGameEngine() {
       shipTag: currentShip.shortTag,
       dayNumber: 1,
       sprintNumber: 1,
-      dayPhase: 'morning',
-      dayTimeFormatted: '09:00 AM',
+      dayPhase: 'planning',
+      dayTimeFormatted: '09:00 AM (Planning)',
       sprintTimer: 45,
       currentPoints: 0,
       vehiclesOnBoard: [],
@@ -2338,11 +2345,59 @@ export function useGameEngine() {
     setVehicles(initialCars);
     stateRef.current.vehicles = initialCars;
 
+    // Build scenario backlog items
+    let scenarioBacklog = generateDailyBacklog(1);
+    if (def.category === 'refactoring') {
+      const epicItems: BacklogItem[] = [
+        {
+          id: 'SCEN-EPIC-1',
+          title: 'Legacy Monolith Billing & Accounting Database Migration',
+          points: 13,
+          type: 'epic',
+          businessValue: 180,
+          priority: 'critical',
+          category: 'Infrastructure',
+          description: 'Monolithic billing module with tight coupling to legacy stored procedures.',
+          selected: true,
+          isCarryover: false
+        },
+        {
+          id: 'SCEN-EPIC-2',
+          title: 'Legacy Monolithic User Auth & Permissions Engine Overhaul',
+          points: 8,
+          type: 'epic',
+          businessValue: 110,
+          priority: 'high',
+          category: 'Core API',
+          description: 'Massive auth service requiring vertical decomposition into microservices.',
+          selected: true,
+          isCarryover: false
+        },
+        {
+          id: 'SCEN-EPIC-3',
+          title: 'Legacy Payment Gateway Webhook Monolith Rewrite',
+          points: 8,
+          type: 'epic',
+          businessValue: 95,
+          priority: 'high',
+          category: 'Payment Gateway',
+          description: 'Deconstruct payment callback monolith into idempotency handlers.',
+          selected: true,
+          isCarryover: false
+        }
+      ];
+      scenarioBacklog = [...epicItems, ...scenarioBacklog];
+    }
+    const freshScenarioBatch = preSelectOptimalBatch(scenarioBacklog, resetFerry.capacity);
+    setBacklogItems(freshScenarioBatch);
+
     setIsScenarioSelectOpen(false);
     setIsScenarioOutcomeOpen(false);
     setIsMainMenuOpen(false);
     setHasStartedGame(true);
-  }, [createVehicle, assignVehicleToLane]);
+    // Present the parking lot screen first before starting the challenge
+    setIsSprintPlanningOpen(true);
+  }, [createVehicle, assignVehicleToLane, seasonNumber, currentShip.name, currentShip.shortTag]);
 
   // Restart the currently active scenario
   const restartScenario = useCallback(() => {
@@ -2441,8 +2496,8 @@ export function useGameEngine() {
       shipTag: currentShip.shortTag,
       dayNumber: 1,
       sprintNumber: 1,
-      dayPhase: 'morning',
-      dayTimeFormatted: '09:00 AM',
+      dayPhase: 'planning',
+      dayTimeFormatted: '09:00 AM (Planning)',
       sprintTimer: 45,
       currentPoints: 0,
       vehiclesOnBoard: [],
@@ -2464,7 +2519,9 @@ export function useGameEngine() {
 
     setHasStartedGame(true);
     setIsMainMenuOpen(false);
-  }, []);
+    // Present the parking lot screen first before starting the shift
+    setIsSprintPlanningOpen(true);
+  }, [seasonNumber, currentShip.name, currentShip.shortTag]);
 
   const dailyDues = useMemo(() => calculateDailyDues(booths, ferry), [booths, ferry]);
 
