@@ -136,7 +136,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
         vehicles.some(
           (v) =>
             v.laneIndex === b.id &&
-            (v.state === 'processing' || (v.state === 'queued' && v.x >= 240) || v.x >= 250)
+            (v.state === 'processing' || (v.state === 'queued' && v.x >= 170) || v.x >= 180)
         );
 
       if (!hasReachedTollGate) return;
@@ -146,8 +146,8 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
         (v) =>
           v.laneIndex === b.id &&
           (v.state === 'processing' ||
-            (v.state === 'queued' && v.x >= 150) ||
-            (v.state === 'approaching' && v.x >= 180))
+            (v.state === 'queued' && v.x >= 80) ||
+            (v.state === 'approaching' && v.x >= 110))
       );
       const pts = q.reduce((sum, v) => sum + v.points, 0);
 
@@ -585,7 +585,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
           <g id="main-road-system">
             {/* Solid Paved Roadway Surface extending from intake through fan-out and all 6 toll gates to the dock */}
             <path
-              d="M -412 202 L 45 202 C 105 202, 130 46, 195 46 L 415 46 L 415 499 L 195 499 C 130 499, 105 273, 45 273 L -412 273 Z"
+              d="M -412 202 L -80 202 C -20 202, 0 46, 50 46 L 415 46 L 415 499 L 50 499 C 0 499, -20 273, -80 273 L -412 273 Z"
               fill="#0d121c"
               stroke="#1e293b"
               strokeWidth="1.5"
@@ -594,21 +594,21 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             {/* Heavy Concrete Road Curbs with high-visibility reflective markers along both edges */}
             {/* North Road Curb */}
             <path
-              d="M -412 199 L 45 199 C 105 199, 130 43, 195 43 L 415 43"
+              d="M -412 199 L -80 199 C -20 199, 0 43, 50 43 L 415 43"
               fill="none"
               stroke="#334155"
               strokeWidth="6"
               strokeLinecap="round"
             />
             <path
-              d="M -412 199 L 45 199 C 105 199, 130 43, 195 43 L 415 43"
+              d="M -412 199 L -80 199 C -20 199, 0 43, 50 43 L 415 43"
               fill="none"
               stroke="#94a3b8"
               strokeWidth="2"
               strokeDasharray="16 16"
             />
             <path
-              d="M -412 202 L 45 202 C 105 202, 130 46, 195 46 L 415 46"
+              d="M -412 202 L -80 202 C -20 202, 0 46, 50 46 L 415 46"
               fill="none"
               stroke="#f8fafc"
               strokeWidth="2.5"
@@ -616,38 +616,36 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
             {/* South Road Curb */}
             <path
-              d="M -412 276 L 45 276 C 105 276, 130 502, 195 502 L 415 502"
+              d="M -412 276 L -80 276 C -20 276, 0 502, 50 502 L 415 502"
               fill="none"
               stroke="#334155"
               strokeWidth="6"
               strokeLinecap="round"
             />
             <path
-              d="M -412 276 L 45 276 C 105 276, 130 502, 195 502 L 415 502"
+              d="M -412 276 L -80 276 C -20 276, 0 502, 50 502 L 415 502"
               fill="none"
               stroke="#94a3b8"
               strokeWidth="2"
               strokeDasharray="16 16"
             />
             <path
-              d="M -412 273 L 45 273 C 105 273, 130 499, 195 499 L 415 499"
+              d="M -412 273 L -80 273 C -20 273, 0 499, 50 499 L 415 499"
               fill="none"
               stroke="#f8fafc"
               strokeWidth="2.5"
             />
 
-            {/* Central Intake Double-Yellow Centerline (x = -412 to 45) */}
-            <line x1="-412" y1="236" x2="45" y2="236" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
-            <line x1="-412" y1="239" x2="45" y2="239" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
+            {/* Central Intake Double-Yellow Centerline (x = -412 to -80) */}
+            <line x1="-412" y1="236" x2="-80" y2="236" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
+            <line x1="-412" y1="239" x2="-80" y2="239" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
 
             {/* Animated Directional Road Flow Arrows pointing east from both bays towards the tolls */}
             <g opacity="0.85">
-              <path d="M -190 234 L -184 237.5 L -190 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -150 234 L -144 237.5 L -150 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -170 234 L -164 237.5 L -170 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -140 234 L -134 237.5 L -140 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               <path d="M -110 234 L -104 237.5 L -110 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -70 234 L -64 237.5 L -70 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -30 234 L -24 237.5 L -30 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M 10 234 L 16 237.5 L 10 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -85 234 L -79 237.5 L -85 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </g>
             <text x="-95" y="226" fill="#eab308" fontSize="8" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.2">
               DUAL-BAY STAGING · FLOW OVER TO TOLL PLAZA →
@@ -661,40 +659,40 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               </text>
             </g>
 
-            {/* Fan-Out Plaza Apron Road Markings (x = 45 to 195) */}
-            <text x="110" y="224" fill="#475569" fontSize="7.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.5" textAnchor="middle">
+            {/* Fan-Out Plaza Apron Road Markings (x = -80 to 50) */}
+            <text x="-15" y="224" fill="#475569" fontSize="7.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.5" textAnchor="middle">
               TOLL PLAZA APPROACH · SELECT LANE
             </text>
 
-            {/* Concrete Lane Dividers separating all 6 lanes from fan-out (x=195) to toll gates (x=300) */}
+            {/* Concrete Lane Dividers separating all 6 lanes from fan-out (x=50) to toll gates (x=230) */}
             {[122.5, 197.5, 272.5, 347.5, 422.5].map((sepY) => (
               <g key={'lane-sep-' + sepY}>
-                <line x1="195" y1={sepY} x2="300" y2={sepY} stroke="#334155" strokeWidth="4" />
-                <line x1="195" y1={sepY} x2="300" y2={sepY} stroke="#f8fafc" strokeWidth="1.5" strokeDasharray="14 10" />
-                {/* Continuation after toll gates to dock (x=336 to 415) */}
-                <line x1="336" y1={sepY} x2="415" y2={sepY} stroke="#334155" strokeWidth="3" />
-                <line x1="336" y1={sepY} x2="415" y2={sepY} stroke="#64748b" strokeWidth="1" strokeDasharray="8 8" />
+                <line x1="50" y1={sepY} x2="230" y2={sepY} stroke="#334155" strokeWidth="4" />
+                <line x1="50" y1={sepY} x2="230" y2={sepY} stroke="#f8fafc" strokeWidth="1.5" strokeDasharray="14 10" />
+                {/* Continuation after toll gates to dock (x=266 to 415) */}
+                <line x1="266" y1={sepY} x2="415" y2={sepY} stroke="#334155" strokeWidth="3" />
+                <line x1="266" y1={sepY} x2="415" y2={sepY} stroke="#64748b" strokeWidth="1" strokeDasharray="8 8" />
               </g>
             ))}
           </g>
 
-          {/* Fan-Out Plaza Transition Zone (x=45 to 195) Curved Guide Tracks */}
+          {/* Fan-Out Plaza Transition Zone (x=-80 to 50) Curved Guide Tracks */}
           {booths.map((booth, idx) => {
             const destY = LANE_Y_POSITIONS[idx] + LANE_HEIGHT / 2;
             return (
               <g key={'fan-guide-' + booth.id}>
                 <path
-                  d={`M 45 237.5 C 105 237.5, 125 ${destY}, 195 ${destY}`}
+                  d={`M -80 237.5 C -20 237.5, 0 ${destY}, 50 ${destY}`}
                   fill="none"
                   stroke={booth.unlocked ? '#38bdf8' : '#475569'}
                   strokeWidth={booth.unlocked ? 1.5 : 1}
                   strokeDasharray={booth.unlocked ? '6 6' : '3 6'}
                   opacity={booth.unlocked ? 0.65 : 0.2}
                 />
-                {/* Availability Indicator at entrance of each lane (x=182) */}
+                {/* Availability Indicator at entrance of each lane (x=40) */}
                 {booth.unlocked ? (
                   <path
-                    d={`M 180 ${destY - 6} L 188 ${destY} L 180 ${destY + 6}`}
+                    d={`M 38 ${destY - 6} L 46 ${destY} L 38 ${destY + 6}`}
                     fill="none"
                     stroke="#10b981"
                     strokeWidth="2"
@@ -704,8 +702,8 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                   />
                 ) : (
                   <g opacity="0.6">
-                    <line x1="180" y1={destY - 5} x2="188" y2={destY + 5} stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="188" y1={destY - 5} x2="180" y2={destY + 5} stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="38" y1={destY - 5} x2="46" y2={destY + 5} stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="46" y1={destY - 5} x2="38" y2={destY + 5} stroke="#f43f5e" strokeWidth="2" strokeLinecap="round" />
                   </g>
                 )}
               </g>
@@ -723,7 +721,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               vehicles.some(
                 (v) =>
                   v.laneIndex === booth.id &&
-                  (v.state === 'processing' || (v.state === 'queued' && v.x >= 240) || v.x >= 250)
+                  (v.state === 'processing' || (v.state === 'queued' && v.x >= 170) || v.x >= 180)
               );
 
             // Queue of vehicles that have reached the toll gate area
@@ -731,8 +729,8 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               (v) =>
                 v.laneIndex === booth.id &&
                 (v.state === 'processing' ||
-                  (v.state === 'queued' && v.x >= 150) ||
-                  (v.state === 'approaching' && v.x >= 180))
+                  (v.state === 'queued' && v.x >= 80) ||
+                  (v.state === 'approaching' && v.x >= 110))
             );
             const lanePoints = laneQueue.reduce((acc, v) => acc + v.points, 0);
             const isAtWipLimit = isUnlocked && hasCarsReachedGate && laneQueue.length >= booth.wipLimit;
@@ -748,11 +746,11 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
             return (
               <g key={booth.id} className="transition-opacity duration-300">
-                {/* Lane asphalt surface leading directly to the toll gates (x=195 to 300) */}
+                {/* Lane asphalt surface leading directly to the toll gates (x=50 to 230) */}
                 <rect
-                  x="195"
+                  x="50"
                   y={laneY}
-                  width="105"
+                  width="180"
                   height={LANE_HEIGHT}
                   fill="#0e131d"
                   stroke="#1e293b"
@@ -761,9 +759,9 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
                 {/* Painted Lane Centerline reaching the toll gate */}
                 <line
-                  x1="195"
+                  x1="50"
                   y1={laneY + LANE_HEIGHT / 2}
-                  x2="278"
+                  x2="208"
                   y2={laneY + LANE_HEIGHT / 2}
                   stroke={isUnlocked ? '#64748b' : '#334155'}
                   strokeWidth="1.5"
@@ -774,7 +772,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                 {isUnlocked && (
                   <g opacity="0.75">
                     <text
-                      x="206"
+                      x="62"
                       y={laneY + LANE_HEIGHT / 2 + 3}
                       fill="#475569"
                       fontSize="8.5"
@@ -785,7 +783,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     </text>
                     {/* Directional Guide Arrow on asphalt pointing to gate */}
                     <path
-                      d={`M 235 ${laneY + LANE_HEIGHT / 2} L 246 ${laneY + LANE_HEIGHT / 2} M 241 ${laneY + LANE_HEIGHT / 2 - 3} L 246 ${laneY + LANE_HEIGHT / 2} L 241 ${laneY + LANE_HEIGHT / 2 + 3}`}
+                      d={`M 95 ${laneY + LANE_HEIGHT / 2} L 110 ${laneY + LANE_HEIGHT / 2} M 104 ${laneY + LANE_HEIGHT / 2 - 3} L 110 ${laneY + LANE_HEIGHT / 2} L 104 ${laneY + LANE_HEIGHT / 2 + 3}`}
                       fill="none"
                       stroke="#64748b"
                       strokeWidth="1.5"
@@ -795,17 +793,17 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                   </g>
                 )}
 
-                {/* Road Stop Line Bar right before the toll gate island base (x=296) */}
+                {/* Road Stop Line Bar right before the toll gate island base (x=226) */}
                 <line
-                  x1="296"
+                  x1="226"
                   y1={laneY + 4}
-                  x2="296"
+                  x2="226"
                   y2={laneY + LANE_HEIGHT - 4}
                   stroke="#ffffff"
                   strokeWidth="3.5"
                 />
                 <text
-                  x="281"
+                  x="211"
                   y={laneY + 42}
                   fill="#94a3b8"
                   fontSize="7"
@@ -816,32 +814,32 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                   STOP
                 </text>
 
-                {/* Concrete Approach Nose Chevron Hazard Stripes (x=292 to 300) */}
+                {/* Concrete Approach Nose Chevron Hazard Stripes (x=222 to 230) */}
                 <polygon
-                  points={`292,${laneY + 12} 300,${laneY - 4} 300,${laneY + 28}`}
+                  points={`222,${laneY + 12} 230,${laneY - 4} 230,${laneY + 28}`}
                   fill="url(#islandChevron)"
                   stroke="#1e222a"
                   strokeWidth="0.5"
                 />
                 <polygon
-                  points={`292,${laneY + LANE_HEIGHT - 12} 300,${laneY + LANE_HEIGHT - 28} 300,${laneY + LANE_HEIGHT + 4}`}
+                  points={`222,${laneY + LANE_HEIGHT - 12} 230,${laneY + LANE_HEIGHT - 28} 230,${laneY + LANE_HEIGHT + 4}`}
                   fill="url(#islandChevron)"
                   stroke="#1e222a"
                   strokeWidth="0.5"
                 />
 
-                {/* Post-gate Road Surface connecting toll gate to the dock (x=336 to 415) */}
+                {/* Post-gate Road Surface connecting toll gate to the dock (x=266 to 415) */}
                 <rect
-                  x="336"
+                  x="266"
                   y={laneY}
-                  width="79"
+                  width="149"
                   height={LANE_HEIGHT}
                   fill="#0b0f17"
                   stroke="#1e293b"
                   strokeWidth="0.5"
                 />
                 <line
-                  x1="336"
+                  x1="266"
                   y1={laneY + LANE_HEIGHT / 2}
                   x2="415"
                   y2={laneY + LANE_HEIGHT / 2}
@@ -851,7 +849,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                 />
                 {isUnlocked && (
                   <path
-                    d={`M 372 ${laneY + LANE_HEIGHT / 2} L 388 ${laneY + LANE_HEIGHT / 2} M 382 ${laneY + LANE_HEIGHT / 2 - 3} L 388 ${laneY + LANE_HEIGHT / 2} L 382 ${laneY + LANE_HEIGHT / 2 + 3}`}
+                    d={`M 330 ${laneY + LANE_HEIGHT / 2} L 346 ${laneY + LANE_HEIGHT / 2} M 340 ${laneY + LANE_HEIGHT / 2 - 3} L 346 ${laneY + LANE_HEIGHT / 2} L 340 ${laneY + LANE_HEIGHT / 2 + 3}`}
                     fill="none"
                     stroke="#10b981"
                     strokeWidth="1.5"
@@ -861,18 +859,18 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                   />
                 )}
 
-                {/* Locked lane overlay (from x=195 to pier x=415) */}
+                {/* Locked lane overlay (from x=50 to pier x=415) */}
                 {!isUnlocked && (
                   <g>
                     <rect
-                      x="195"
+                      x="50"
                       y={laneY - 2}
-                      width="220"
+                      width="365"
                       height={LANE_HEIGHT + 4}
                       fill="#090d16"
                       opacity="0.85"
                     />
-                    <line x1="195" y1={laneY + 35} x2="300" y2={laneY + 35} stroke="#3b0764" strokeWidth="2" strokeDasharray="6 6" />
+                    <line x1="50" y1={laneY + 35} x2="230" y2={laneY + 35} stroke="#3b0764" strokeWidth="2" strokeDasharray="6 6" />
 
                     {/* Unlock Button / Gate */}
                     <g
@@ -880,7 +878,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       onClick={() => onUnlockBooth(booth.id)}
                     >
                       <rect
-                        x="205"
+                        x="120"
                         y={laneY + 8}
                         width="160"
                         height={52}
@@ -890,11 +888,11 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         strokeWidth="1.5"
                         className="group-hover:fill-indigo-900/60 transition-colors"
                       />
-                      <Lock x="215" y={laneY + 22} width="18" height="18" className="text-indigo-400" />
-                      <text x="240" y={laneY + 28} fill="#e0e7ff" fontSize="10.5" fontWeight="bold">
+                      <Lock x="130" y={laneY + 22} width="18" height="18" className="text-indigo-400" />
+                      <text x="155" y={laneY + 28} fill="#e0e7ff" fontSize="10.5" fontWeight="bold">
                         Unlock {booth.name.split('·')[0]}
                       </text>
-                      <text x="240" y={laneY + 44} fill={funds >= booth.unlockCost ? '#a5b4fc' : '#f43f5e'} fontSize="10.5" fontFamily="var(--font-mono)">
+                      <text x="155" y={laneY + 44} fill={funds >= booth.unlockCost ? '#a5b4fc' : '#f43f5e'} fontSize="10.5" fontFamily="var(--font-mono)">
                         ${booth.unlockCost} {funds < booth.unlockCost ? '(Need Funds)' : '→ Open Lane'}
                       </text>
                     </g>
@@ -908,7 +906,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     {booth.incident && (
                       <g>
                         <rect
-                          x="180"
+                          x="110"
                           y={laneY}
                           width="120"
                           height={LANE_HEIGHT}
@@ -925,9 +923,9 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                           }}
                         >
                           <rect
-                            x="45"
+                            x="15"
                             y={laneY + 12}
-                            width="245"
+                            width="215"
                             height="26"
                             rx="6"
                             fill="#450a0a"
@@ -936,7 +934,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             filter="url(#glow)"
                           />
                           <text
-                            x="54"
+                            x="24"
                             y={laneY + 28}
                             fill="#fecdd3"
                             fontSize="8"
@@ -946,7 +944,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             ⚠️ {booth.incident.title.toUpperCase()} ({Math.ceil(booth.incident.remaining)}s)
                           </text>
                           <rect
-                            x="215"
+                            x="155"
                             y={laneY + 15}
                             width="70"
                             height="20"
@@ -957,7 +955,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             className="group-hover:fill-red-600 transition-colors"
                           />
                           <text
-                            x="250"
+                            x="190"
                             y={laneY + 28}
                             fill="#ffffff"
                             fontSize="7.5"
@@ -974,7 +972,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     {isSevereBottleneck && !booth.incident && (
                       <g className="animate-pulse">
                         <rect
-                          x="95"
+                          x="25"
                           y={laneY + 4}
                           width="201"
                           height={LANE_HEIGHT - 8}
@@ -990,7 +988,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                           onClick={() => openFlowInspection(booth)}
                         >
                           <rect
-                            x="105"
+                            x="35"
                             y={laneY + 12}
                             width="186"
                             height="19"
@@ -1001,7 +999,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             className="group-hover:fill-rose-900 transition-colors"
                           />
                           <text
-                            x="198"
+                            x="128"
                             y={laneY + 25}
                             fill="#fecdd3"
                             fontSize="8"
@@ -1019,7 +1017,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     {isAtWipLimit && !isSevereBottleneck && (
                       <g className="animate-pulse">
                         <rect
-                          x="115"
+                          x="45"
                           y={laneY + 8}
                           width="180"
                           height={54}
@@ -1027,7 +1025,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                           fill="#ef4444"
                           opacity="0.12"
                         />
-                        <text x="125" y={laneY + 24} fill="#fca5a5" fontSize="8.5" fontWeight="bold" fontFamily="var(--font-mono)">
+                        <text x="55" y={laneY + 24} fill="#fca5a5" fontSize="8.5" fontWeight="bold" fontFamily="var(--font-mono)">
                           ▲ WIP LIMIT REACHED ({laneQueue.length}/{booth.wipLimit})
                         </text>
                       </g>
@@ -1037,7 +1035,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     {hasHeavyVehicle && !isSevereBottleneck && (
                       <g>
                         <rect
-                          x="190"
+                          x="120"
                           y={laneY + 4}
                           width="100"
                           height="16"
@@ -1046,7 +1044,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                           stroke="#ea580c"
                           strokeWidth="1"
                         />
-                        <text x="196" y={laneY + 15} fill="#fdba74" fontSize="8.5" fontWeight="bold">
+                        <text x="126" y={laneY + 15} fill="#fdba74" fontSize="8.5" fontWeight="bold">
                           🐢 BOTTLENECK
                         </text>
                       </g>
@@ -1065,7 +1063,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                     >
                       {/* Concrete Island Base */}
                       <rect
-                        x="300"
+                        x="230"
                         y={laneY - 4}
                         width="36"
                         height={LANE_HEIGHT + 8}
@@ -1078,7 +1076,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
                       {/* Toll Booth Cabin */}
                       <rect
-                        x="304"
+                        x="234"
                         y={laneY + 8}
                         width="28"
                         height="40"
@@ -1090,7 +1088,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
                       {/* Cabin Window */}
                       <rect
-                        x="307"
+                        x="237"
                         y={laneY + 12}
                         width="22"
                         height="15"
@@ -1103,7 +1101,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       {booth.incident ? (
                         <g>
                           <circle
-                            cx="318"
+                            cx="248"
                             cy={laneY + 4}
                             r="8"
                             fill="#f59e0b"
@@ -1111,7 +1109,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             className="animate-ping"
                           />
                           <circle
-                            cx="318"
+                            cx="248"
                             cy={laneY + 4}
                             r="4.5"
                             fill="#f59e0b"
@@ -1121,7 +1119,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       ) : isSevereBottleneck ? (
                         <g>
                           <circle
-                            cx="318"
+                            cx="248"
                             cy={laneY + 4}
                             r="8"
                             fill="#ef4444"
@@ -1129,7 +1127,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             className="animate-ping"
                           />
                           <circle
-                            cx="318"
+                            cx="248"
                             cy={laneY + 4}
                             r="4.5"
                             fill="#ef4444"
@@ -1138,7 +1136,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         </g>
                       ) : (
                         <circle
-                          cx="318"
+                          cx="248"
                           cy={laneY + 4}
                           r="4"
                           fill={booth.isProcessing ? '#38bdf8' : booth.cooldownTimer > 0 ? '#f59e0b' : '#10b981'}
@@ -1150,7 +1148,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       {booth.cooldownTimer > 0 && (
                         <g>
                           <rect
-                            x="235"
+                            x="165"
                             y={laneY - 4}
                             width="70"
                             height="13"
@@ -1160,7 +1158,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                             strokeWidth="1"
                           />
                           <text
-                            x="270"
+                            x="200"
                             y={laneY + 5}
                             fill="#fef08a"
                             fontSize="7"
@@ -1175,7 +1173,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
                       {/* Electronic Overhead Signboard */}
                       <rect
-                        x="235"
+                        x="165"
                         y={laneY + 2}
                         width="70"
                         height="20"
@@ -1185,7 +1183,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         strokeWidth={isSevereBottleneck ? '1.5' : '1'}
                       />
                       <text
-                        x="240"
+                        x="170"
                         y={laneY + 11}
                         fill={isSevereBottleneck ? '#fca5a5' : '#94a3b8'}
                         fontSize="7.5"
@@ -1194,7 +1192,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         {isSevereBottleneck ? '⚠️ BOTTLENECK' : `Lv.${booth.level}`}
                       </text>
                       <text
-                        x="270"
+                        x="200"
                         y={laneY + 11}
                         fill={isSevereBottleneck ? '#f87171' : '#f59e0b'}
                         fontSize="8"
@@ -1204,9 +1202,9 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         {isSevereBottleneck ? `${laneQueue.length}Q` : `x${booth.multiplier.toFixed(2)}`}
                       </text>
                       {/* XP / Queue Load Progress Bar */}
-                      <rect x="240" y={laneY + 14} width="60" height="3" rx="1.5" fill="#1e293b" />
+                      <rect x="170" y={laneY + 14} width="60" height="3" rx="1.5" fill="#1e293b" />
                       <rect
-                        x="240"
+                        x="170"
                         y={laneY + 14}
                         width={
                           isSevereBottleneck
@@ -1220,12 +1218,12 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
                       {/* Specialization Icon Badge */}
                       {booth.specialization === 'small_only' && (
-                        <text x="240" y={laneY - 2} fill="#38bdf8" fontSize="8" fontWeight="bold">
+                        <text x="170" y={laneY - 2} fill="#38bdf8" fontSize="8" fontWeight="bold">
                           ⚡ Expedite Lane
                         </text>
                       )}
                       {booth.specialization === 'heavy_only' && (
-                        <text x="240" y={laneY - 2} fill="#c084fc" fontSize="8" fontWeight="bold">
+                        <text x="170" y={laneY - 2} fill="#c084fc" fontSize="8" fontWeight="bold">
                           🚛 Heavy Haul
                         </text>
                       )}
@@ -1234,13 +1232,13 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       <g
                         transform={
                           booth.barrierRaised
-                            ? `rotate(-80, 336, ${laneY + 45})`
-                            : `rotate(0, 336, ${laneY + 45})`
+                            ? `rotate(-80, 266, ${laneY + 45})`
+                            : `rotate(0, 266, ${laneY + 45})`
                         }
                         className="transition-transform duration-300 ease-out"
                       >
                         <rect
-                          x="336"
+                          x="266"
                           y={laneY + 42}
                           width="26"
                           height="5"
@@ -1254,9 +1252,9 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       {/* Processing progress above vehicle at booth */}
                       {booth.isProcessing && (
                         <g>
-                          <rect x="290" y={laneY + 60} width="60" height="5" rx="2.5" fill="#0f172a" stroke="#334155" strokeWidth="0.5" />
+                          <rect x="220" y={laneY + 60} width="60" height="5" rx="2.5" fill="#0f172a" stroke="#334155" strokeWidth="0.5" />
                           <rect
-                            x="290"
+                            x="220"
                             y={laneY + 60}
                             width={(booth.processingProgress / 100) * 60}
                             height="5"
@@ -1440,20 +1438,20 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               angle = 0;
             } else if (v.y !== undefined && !isNaN(v.y)) {
               carY = v.y;
-            } else if (v.x < 40) {
+            } else if (v.x < -80) {
               carY = FEEDER_CAR_Y;
-            } else if (v.x < 185) {
-              const t = Math.max(0, Math.min(1, (v.x - 40) / 145));
+            } else if (v.x < 50) {
+              const t = Math.max(0, Math.min(1, (v.x - (-80)) / 130));
               const smoothT = t * t * (3 - 2 * t);
               carY = FEEDER_CAR_Y + (targetCarY - FEEDER_CAR_Y) * smoothT;
             }
 
             // Calculate subtle steering bank angle while fanning out into assigned lane
-            if (v.state !== 'staged' && v.x >= 40 && v.x <= 185) {
-              const t = (v.x - 40) / 145;
+            if (v.state !== 'staged' && v.x >= -80 && v.x <= 50) {
+              const t = (v.x - (-80)) / 130;
               const derivative = 6 * t * (1 - t);
               const dy = targetCarY - FEEDER_CAR_Y;
-              angle = Math.atan2((dy * derivative) / 145, 1) * (180 / Math.PI);
+              angle = Math.atan2((dy * derivative) / 130, 1) * (180 / Math.PI);
               angle = Math.max(-25, Math.min(25, angle));
             }
 

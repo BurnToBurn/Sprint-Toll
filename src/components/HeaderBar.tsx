@@ -57,7 +57,7 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
   funds,
   pendingDailyRevenue = 0,
   dailyDuesAmount = 0,
-  totalPoints,
+  totalPoints: _totalPoints,
   ferryPoints,
   ferryCapacity,
   dayNumber: _dayNumber,
@@ -227,15 +227,6 @@ export const HeaderBar: React.FC<HeaderBarProps> = ({
                 -${dailyDuesAmount.toLocaleString()} dues
               </span>
             </div>
-          </div>
-
-          <div className="hidden lg:flex items-center gap-1.5 bg-[#F4F6F9] text-[#1E222A] border-[2.5px] border-[#1E222A] px-3.5 py-2 rounded-2xl shadow-[0_3px_0_#1E222A] font-black">
-            <span className="text-[11px] uppercase tracking-wider text-slate-500" style={{ fontFamily: 'var(--font-heading)' }}>
-              Delivered
-            </span>
-            <span className="font-mono font-black text-sm text-[#48A2D8] tabular-nums">
-              {totalPoints} pts
-            </span>
           </div>
         </div>
 

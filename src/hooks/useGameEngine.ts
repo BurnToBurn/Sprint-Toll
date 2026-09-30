@@ -511,12 +511,12 @@ export function useGameEngine() {
     newVehicle.y = 237.5 - newVehicle.width / 2;
 
     // Safety: ensure new vehicle starts safely behind any vehicle currently queued or moving on the feeder road
-    const feederCars = stateRef.current.vehicles.filter((v) => v.x < 65 && v.state !== 'departed' && v.state !== 'on_ferry');
+    const feederCars = stateRef.current.vehicles.filter((v) => v.x < -30 && v.state !== 'departed' && v.state !== 'on_ferry');
     if (feederCars.length > 0) {
       const minX = Math.min(...feederCars.map((v) => v.x));
-      newVehicle.x = Math.max(-360, Math.min(-180, minX - newVehicle.length - 22));
+      newVehicle.x = Math.max(-240, Math.min(-140, minX - newVehicle.length - 20));
     } else {
-      newVehicle.x = -200;
+      newVehicle.x = -150;
     }
 
     setVehicles((prev) => [...prev, newVehicle]);
@@ -854,7 +854,7 @@ export function useGameEngine() {
             ...v,
             state: 'approaching',
             laneIndex: lane,
-            x: -200,
+            x: -150,
             y: 237.5 - v.width / 2
           };
         }
@@ -1406,7 +1406,7 @@ export function useGameEngine() {
       // Fast, smooth rollout so stories from sprint planning immediately flow over to the tolls!
       const releaseInterval = isContinualFlow ? 550 : 850;
       const entryBlocked = currVehicles.some(
-        (v) => v.x > -205 && v.x < -140 && v.state !== 'staged' && v.state !== 'departed' && v.state !== 'on_ferry'
+        (v) => v.x > -165 && v.x < -100 && v.state !== 'staged' && v.state !== 'departed' && v.state !== 'on_ferry'
       );
 
       if (timeSinceLastParkingRelease > releaseInterval && !entryBlocked) {
@@ -1423,7 +1423,7 @@ export function useGameEngine() {
                 ...v,
                 state: 'approaching',
                 laneIndex: assignedLane,
-                x: -200,
+                x: -150,
                 y: 237.5 - v.width / 2
               };
             }
@@ -1648,7 +1648,7 @@ export function useGameEngine() {
     });
 
     // Process each toll booth
-    const BOOTH_BARRIER_X = 315;
+    const BOOTH_BARRIER_X = 245;
 
     updatedBooths.forEach((booth) => {
       if (!booth.unlocked) return;
@@ -1842,13 +1842,13 @@ export function useGameEngine() {
         }
 
         // 2. Feeder and fan-out merge spacing: single file until paths diverge in Y
-        if (v.x < 130) {
+        if (v.x < -10) {
           const feederAhead = updatedVehicles.filter(
             (other) =>
               other.id !== v.id &&
               other.state !== 'staged' &&
               other.x > v.x &&
-              other.x < 160 &&
+              other.x < 25 &&
               other.state !== 'departed' &&
               other.state !== 'on_ferry' &&
               Math.abs((other.y ?? FEEDER_Y) - (v.y ?? FEEDER_Y)) < 34
@@ -1886,11 +1886,11 @@ export function useGameEngine() {
           }
         }
 
-        // Trajectory: Feeder lane (x < 40) -> Fan out S-curve (40..185) -> Settled in lane (185+)
-        if (v.x < 40) {
+        // Trajectory: Feeder lane (x < -80) -> Fan out S-curve (-80..50) -> Settled in lane (50+)
+        if (v.x < -80) {
           v.y = FEEDER_Y;
-        } else if (v.x < 185) {
-          const t = Math.max(0, Math.min(1, (v.x - 40) / 145));
+        } else if (v.x < 50) {
+          const t = Math.max(0, Math.min(1, (v.x - (-80)) / 130));
           const smoothT = t * t * (3 - 2 * t);
           v.y = FEEDER_Y + (targetLaneY - FEEDER_Y) * smoothT;
         } else {
@@ -2024,8 +2024,8 @@ export function useGameEngine() {
           (v) =>
             v.laneIndex === b.id &&
             (v.state === 'processing' ||
-              (v.state === 'queued' && v.x >= 150) ||
-              (v.state === 'approaching' && v.x >= 180))
+              (v.state === 'queued' && v.x >= 80) ||
+              (v.state === 'approaching' && v.x >= 110))
         );
         const lanePoints = gateVehicles.reduce((sum, v) => sum + v.points, 0);
         if (lanePoints > maxQueuePoints) {
@@ -2428,7 +2428,7 @@ export function useGameEngine() {
       const v = createVehicle(pts);
       v.laneIndex = assignVehicleToLane(v, resetBooths);
       v.y = 237.5 - v.width / 2;
-      v.x = -60 - i * 42;
+      v.x = -20 - i * 35;
       initialCars.push(v);
     }
     setVehicles(initialCars);
