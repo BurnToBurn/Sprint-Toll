@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   VehicleStory,
   TollBooth,
@@ -39,6 +39,8 @@ interface TollSimulationCanvasProps {
   onUpgradeEfficiency?: (boothId: number) => void;
   onUpgradeAutomation?: (boothId: number) => void;
   onSetLaneWipLimit?: (boothId: number, limit: number) => void;
+  gameSpeed: number;
+  onSetGameSpeed: (speed: number) => void;
   continuousFlowMode?: boolean;
   onToggleContinuousFlow?: () => void;
   funds: number;
@@ -66,6 +68,8 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   onUpgradeEfficiency,
   onUpgradeAutomation,
   onSetLaneWipLimit,
+  gameSpeed,
+  onSetGameSpeed,
   continuousFlowMode = true,
   onToggleContinuousFlow,
   funds,
@@ -77,6 +81,29 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 }) => {
   const [hoveredVehicle, setHoveredVehicle] = useState<VehicleStory | null>(null);
   const [selectedViolationBooth, setSelectedViolationBooth] = useState<TollBooth | null>(null);
+  const previousGameSpeedRef = useRef<number | null>(null);
+
+  const openFlowInspection = (booth: TollBooth) => {
+    if (previousGameSpeedRef.current === null) {
+      previousGameSpeedRef.current = gameSpeed;
+      onSetGameSpeed(0);
+    }
+    setSelectedViolationBooth(booth);
+  };
+
+  const closeFlowInspection = () => {
+    setSelectedViolationBooth(null);
+    if (previousGameSpeedRef.current !== null) {
+      onSetGameSpeed(previousGameSpeedRef.current);
+      previousGameSpeedRef.current = null;
+    }
+  };
+
+  React.useEffect(() => () => {
+    if (previousGameSpeedRef.current !== null) {
+      onSetGameSpeed(previousGameSpeedRef.current);
+    }
+  }, [onSetGameSpeed]);
 
   // Calculate ferry position when sailing
   let ferryX = 470;
@@ -292,7 +319,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             </div>
           </div>
           <button
-            onClick={() => setSelectedViolationBooth(primaryBottleneck.booth)}
+            onClick={() => openFlowInspection(primaryBottleneck.booth)}
             className="px-3 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ml-3 border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
             title="Click to view Flow Efficiency violation explanation and remedies"
           >
@@ -976,7 +1003,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         {/* Interactive Clickable Road Hazard Badge */}
                         <g
                           className="cursor-pointer group"
-                          onClick={() => setSelectedViolationBooth(booth)}
+                          onClick={() => openFlowInspection(booth)}
                         >
                           <rect
                             x="105"
@@ -1046,7 +1073,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       className={`cursor-pointer group ${isSevereBottleneck ? 'animate-pulse' : ''}`}
                       onClick={() => {
                         if (isSevereBottleneck) {
-                          setSelectedViolationBooth(booth);
+                          openFlowInspection(booth);
                         } else {
                           onSelectBooth(booth.id);
                         }
@@ -1681,7 +1708,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             completedPointsTotal: 0
           }}
           funds={funds}
-          onClose={() => setSelectedViolationBooth(null)}
+          onClose={closeFlowInspection}
           onSliceStory={onSliceStory}
           onUpgradeEfficiency={onUpgradeEfficiency}
           onUpgradeAutomation={onUpgradeAutomation}

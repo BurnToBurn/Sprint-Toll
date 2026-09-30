@@ -78,7 +78,7 @@ export const FlowEfficiencyViolationModal: React.FC<FlowEfficiencyViolationModal
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E222A]/70 backdrop-blur-md animate-fadeIn">
-      <div className="relative w-full max-w-2xl bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl p-6 shadow-[0_12px_0_#1E222A] text-[#1E222A] space-y-5 overflow-hidden">
+      <div className="relative w-full max-w-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl p-6 shadow-[0_12px_0_#1E222A] text-[#1E222A] space-y-5">
         <div className="rivet top-3 left-3" />
         <div className="rivet top-3 right-3" />
         <div className="rivet bottom-3 left-3" />

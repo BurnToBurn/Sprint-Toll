@@ -28,7 +28,7 @@ export const StoryInspectorModal: React.FC<StoryInspectorModalProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1E222A]/70 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-md bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl p-6 shadow-[0_10px_0_#1E222A] text-[#1E222A] space-y-5">
+      <div className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto bg-[#F4F6F9] border-[3px] border-[#1E222A] rounded-3xl p-6 shadow-[0_10px_0_#1E222A] text-[#1E222A] space-y-5">
         <div className="rivet top-3 left-3" />
         <div className="rivet top-3 right-3" />
         <div className="rivet bottom-3 left-3" />

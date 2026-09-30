@@ -195,6 +195,8 @@ export default function App() {
               onUpgradeEfficiency={upgradeBoothEfficiency}
               onUpgradeAutomation={upgradeBoothAutomation}
               onSetLaneWipLimit={setLaneWipLimit}
+              gameSpeed={settings.gameSpeed}
+              onSetGameSpeed={setGameSpeed}
               continuousFlowMode={settings.continuousFlowMode}
               onToggleContinuousFlow={toggleContinuousFlowMode}
               funds={funds}
