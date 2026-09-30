@@ -482,22 +482,22 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               );
             })}
 
-            {/* Tarmac connector slipway from North lot down into the central street */}
+            {/* Tarmac connector slipway from North lot down into the North one-way lane */}
             <path
-              d="M -218 135 C -170 135, -170 202, -120 202 L -218 202 Z"
+              d="M -218 135 C -170 135, -170 202, -120 202 L -120 237.5 L -218 237.5 Z"
               fill="#0b1324"
               stroke="#334155"
               strokeWidth="1.5"
             />
 
-            {/* North merge feeder dashed curve guide */}
+            {/* North merge feeder dashed curve guide into North one-way lane */}
             <path
-              d="M -218 135 C -170 160, -165 237.5, -120 237.5"
+              d="M -218 135 C -170 145, -165 219.75, -120 219.75"
               fill="none"
-              stroke="#eab308"
-              strokeWidth="2"
+              stroke="#fef08a"
+              strokeWidth="2.5"
               strokeDasharray="5 4"
-              opacity="0.9"
+              opacity="0.95"
             />
           </g>
 
@@ -562,22 +562,22 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               );
             })}
 
-            {/* Tarmac connector slipway from South lot up into the central street */}
+            {/* Tarmac connector slipway from South lot up into the South one-way lane */}
             <path
-              d="M -218 375 C -170 375, -170 273, -120 273 L -218 273 Z"
+              d="M -218 375 C -170 375, -170 273, -120 273 L -120 237.5 L -218 237.5 Z"
               fill="#0b1324"
               stroke="#334155"
               strokeWidth="1.5"
             />
 
-            {/* South merge feeder dashed curve guide */}
+            {/* South merge feeder dashed curve guide into South one-way lane */}
             <path
-              d="M -218 375 C -170 350, -165 237.5, -120 237.5"
+              d="M -218 375 C -170 360, -165 255.25, -120 255.25"
               fill="none"
               stroke="#38bdf8"
-              strokeWidth="2"
+              strokeWidth="2.5"
               strokeDasharray="5 4"
-              opacity="0.9"
+              opacity="0.95"
             />
           </g>
 
@@ -636,32 +636,40 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               strokeWidth="2.5"
             />
 
-            {/* Central Intake Double-Yellow Centerline (x = -412 to -80) */}
-            <line x1="-412" y1="236" x2="-80" y2="236" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
-            <line x1="-412" y1="239" x2="-80" y2="239" stroke="#f59e0b" strokeWidth="1.5" strokeDasharray="8 6" />
+            {/* White Dashed Divider Line separating North and South One-Way Lanes (x = -412 to -80) */}
+            <line x1="-412" y1="237.5" x2="-80" y2="237.5" stroke="#f8fafc" strokeWidth="2" strokeDasharray="14 10" />
 
-            {/* Animated Directional Road Flow Arrows pointing east from both bays towards the tolls */}
+            {/* North One-Way Lane Markings (from North Staging Bay) */}
             <g opacity="0.85">
-              <path d="M -170 234 L -164 237.5 L -170 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -140 234 L -134 237.5 L -140 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -110 234 L -104 237.5 L -110 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M -85 234 L -79 237.5 L -85 241" fill="none" stroke="#eab308" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -170 216 L -164 219.5 L -170 223" fill="none" stroke="#fef08a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -130 216 L -124 219.5 L -130 223" fill="none" stroke="#fef08a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -90 216 L -84 219.5 L -90 223" fill="none" stroke="#fef08a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             </g>
-            <text x="-95" y="226" fill="#eab308" fontSize="8" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.2">
-              DUAL-BAY STAGING · FLOW OVER TO TOLL PLAZA →
+            <text x="-310" y="222" fill="#fef08a" fontSize="6.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="0.8">
+              NORTH ONE-WAY LANE (FROM NORTH LOT) →
+            </text>
+
+            {/* South One-Way Lane Markings (from South Staging Bay) */}
+            <g opacity="0.85">
+              <path d="M -170 252 L -164 255.5 L -170 259" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -130 252 L -124 255.5 L -130 259" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              <path d="M -90 252 L -84 255.5 L -90 259" fill="none" stroke="#38bdf8" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            </g>
+            <text x="-310" y="258" fill="#38bdf8" fontSize="6.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="0.8">
+              SOUTH ONE-WAY LANE (FROM SOUTH LOT) →
             </text>
 
             {/* Feeder Overhead Road Sign / Marker */}
-            <g transform="translate(-160, 168)">
-              <rect width="96" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
-              <text x="48" y="14" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
-                HIGHWAY INTAKE · ARTERIAL
+            <g transform="translate(-175, 168)">
+              <rect width="130" height="22" rx="4" fill="#0369a1" stroke="#38bdf8" strokeWidth="1" />
+              <text x="65" y="14" fill="#ffffff" fontSize="7" fontWeight="bold" textAnchor="middle" fontFamily="var(--font-mono)">
+                ONE-WAY EAST · AUTO-ROUTING →
               </text>
             </g>
 
             {/* Fan-Out Plaza Apron Road Markings (x = -80 to 50) */}
             <text x="-15" y="224" fill="#475569" fontSize="7.5" fontWeight="black" fontFamily="var(--font-mono)" letterSpacing="1.5" textAnchor="middle">
-              TOLL PLAZA APPROACH · SELECT LANE
+              FERRY APPROACH · DIVERGING TO SHORTEST TOLL LANE
             </text>
 
             {/* Concrete Lane Dividers separating all 6 lanes from fan-out (x=50) to toll gates (x=230) */}
@@ -676,13 +684,14 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             ))}
           </g>
 
-          {/* Fan-Out Plaza Transition Zone (x=-80 to 50) Curved Guide Tracks */}
+          {/* Fan-Out Plaza Transition Zone (x=-80 to 50) Curved Guide Tracks from North and South Lanes */}
           {booths.map((booth, idx) => {
             const destY = LANE_Y_POSITIONS[idx] + LANE_HEIGHT / 2;
+            const startY = idx <= 2 ? 219.75 : 255.25;
             return (
               <g key={'fan-guide-' + booth.id}>
                 <path
-                  d={`M -80 237.5 C -20 237.5, 0 ${destY}, 50 ${destY}`}
+                  d={`M -80 ${startY} C -20 ${startY}, 0 ${destY}, 50 ${destY}`}
                   fill="none"
                   stroke={booth.unlocked ? '#38bdf8' : '#475569'}
                   strokeWidth={booth.unlocked ? 1.5 : 1}
@@ -1420,7 +1429,8 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             const targetLaneIndex = v.laneIndex >= 0 && v.laneIndex < LANE_Y_POSITIONS.length ? v.laneIndex : 2;
             const laneY = LANE_Y_POSITIONS[targetLaneIndex];
             const targetCarY = laneY + (LANE_HEIGHT - v.width) / 2;
-            const FEEDER_CAR_Y = 237.5 - v.width / 2;
+            const isNorth = v.feederLane === 'north' || (v.parkingSlotIndex !== undefined && v.parkingSlotIndex % 2 === 0);
+            const feederCarY = (isNorth ? 219.75 : 255.25) - v.width / 2;
 
             // Calculate actual visual coordinates
             let carX = v.x;
@@ -1429,28 +1439,28 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 
             if (v.state === 'staged') {
               const slot = v.parkingSlotIndex ?? 0;
-              const isNorth = slot % 2 === 0;
+              const slotIsNorth = slot % 2 === 0;
               const bayIndex = Math.floor(slot / 2);
               const col = bayIndex % 3;
               const row = Math.floor(bayIndex / 3);
               carX = -402 + col * 58 + (48 - v.length) / 2;
-              carY = (isNorth ? 54 + row * 46 : 292 + row * 46) + (36 - v.width) / 2;
+              carY = (slotIsNorth ? 54 + row * 46 : 292 + row * 46) + (36 - v.width) / 2;
               angle = 0;
             } else if (v.y !== undefined && !isNaN(v.y)) {
               carY = v.y;
             } else if (v.x < -80) {
-              carY = FEEDER_CAR_Y;
+              carY = feederCarY;
             } else if (v.x < 50) {
               const t = Math.max(0, Math.min(1, (v.x - (-80)) / 130));
               const smoothT = t * t * (3 - 2 * t);
-              carY = FEEDER_CAR_Y + (targetCarY - FEEDER_CAR_Y) * smoothT;
+              carY = feederCarY + (targetCarY - feederCarY) * smoothT;
             }
 
             // Calculate subtle steering bank angle while fanning out into assigned lane
             if (v.state !== 'staged' && v.x >= -80 && v.x <= 50) {
               const t = (v.x - (-80)) / 130;
               const derivative = 6 * t * (1 - t);
-              const dy = targetCarY - FEEDER_CAR_Y;
+              const dy = targetCarY - feederCarY;
               angle = Math.atan2((dy * derivative) / 130, 1) * (180 / Math.PI);
               angle = Math.max(-25, Math.min(25, angle));
             }

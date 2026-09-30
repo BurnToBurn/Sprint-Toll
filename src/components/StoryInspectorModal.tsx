@@ -95,6 +95,24 @@ export const StoryInspectorModal: React.FC<StoryInspectorModalProps> = ({
           </div>
         </div>
 
+        {/* Parking Bay & One-Way Routing Info */}
+        {vehicle.state === 'staged' && (
+          <div className="bg-white border-2 border-[#1E222A] rounded-2xl p-3 text-xs font-mono flex flex-col sm:flex-row sm:items-center justify-between gap-1 shadow-[0_2px_0_#1E222A]">
+            <span className="font-bold text-slate-600">Staging Bay:</span>
+            <span
+              className={`font-black px-2 py-0.5 rounded-lg border text-[11px] ${
+                (vehicle.parkingSlotIndex ?? 0) % 2 === 0
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-sky-100 text-sky-900 border-sky-300'
+              }`}
+            >
+              {(vehicle.parkingSlotIndex ?? 0) % 2 === 0
+                ? `North Lot (Stall N${Math.floor((vehicle.parkingSlotIndex ?? 0) / 2) + 1}) → North One-Way Lane`
+                : `South Lot (Stall S${Math.floor((vehicle.parkingSlotIndex ?? 0) / 2) + 1}) → South One-Way Lane`}
+            </span>
+          </div>
+        )}
+
         {/* Educational Callout on Batch Size */}
         <div className="bg-[#FFD200]/20 border-2 border-[#FFD200] rounded-2xl p-4 space-y-1.5 text-xs text-[#1E222A]">
           <div className="flex items-center gap-1.5 font-black text-[#E85D04]" style={{ fontFamily: 'var(--font-heading)' }}>

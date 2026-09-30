@@ -472,26 +472,73 @@ export function useGameEngine() {
     };
   }, []);
 
-  // Assign vehicle randomly into an available (unlocked) lane
-  const assignVehicleToLane = useCallback((vehicle: VehicleStory, currentBooths: TollBooth[]) => {
-    const unlockedBooths = currentBooths.filter((b) => b.unlocked);
-    if (unlockedBooths.length === 0) return 0;
+  // Select the shortest toll lane (fewest vehicles queued / lowest point load, respecting specialization & north/south affinity)
+  const selectShortestTollLane = useCallback(
+    (vehicle: VehicleStory, currentBooths: TollBooth[], currentVehicles?: VehicleStory[]) => {
+      const unlockedBooths = currentBooths.filter((b) => b.unlocked);
+      if (unlockedBooths.length === 0) return 0;
 
-    // Filter booths compatible with vehicle points / specialization
-    const eligibleBooths = unlockedBooths.filter((b) => {
-      if (b.specialization === 'small_only') return vehicle.points <= 3;
-      if (b.specialization === 'heavy_only') return vehicle.points >= 5;
-      return true; // 'all'
-    });
+      // Filter booths compatible with vehicle points / specialization
+      let eligibleBooths = unlockedBooths.filter((b) => {
+        if (b.specialization === 'small_only') return vehicle.points <= 3;
+        if (b.specialization === 'heavy_only') return vehicle.points >= 5;
+        return true; // 'all'
+      });
+      if (eligibleBooths.length === 0) {
+        eligibleBooths = unlockedBooths;
+      }
 
-    const candidateBooths = eligibleBooths.length > 0 ? eligibleBooths : unlockedBooths;
+      const allVehicles = currentVehicles || stateRef.current.vehicles;
+      const isNorth =
+        vehicle.feederLane === 'north' ||
+        (vehicle.parkingSlotIndex !== undefined && vehicle.parkingSlotIndex % 2 === 0);
 
-    // Spread randomly among available lanes!
-    const randomIndex = Math.floor(Math.random() * candidateBooths.length);
-    return candidateBooths[randomIndex].id;
-  }, []);
+      // Score each booth: lower score = shorter lane / faster queue
+      const boothScores = eligibleBooths.map((booth) => {
+        const queue = allVehicles.filter(
+          (other) =>
+            other.id !== vehicle.id &&
+            other.laneIndex === booth.id &&
+            other.state !== 'staged' &&
+            other.state !== 'departed' &&
+            other.state !== 'on_ferry'
+        );
+        const queueLength = queue.length;
+        const queuePoints = queue.reduce((sum, v) => sum + v.points, 0);
+        const isFull = queueLength >= booth.wipLimit;
+        const incidentPenalty = booth.incident ? 60 : 0;
+        const fullPenalty = isFull ? 30 : 0;
 
-  // Spawn vehicle on highway (all vehicles enter through one single feeder lane and spread randomly into available lanes)
+        const score = queueLength * 10 + queuePoints + incidentPenalty + fullPenalty;
+
+        return {
+          boothId: booth.id,
+          score,
+          queueLength
+        };
+      });
+
+      // Sort by score ascending (shortest queue first)
+      boothScores.sort((a, b) => {
+        if (a.score !== b.score) return a.score - b.score;
+        // Tie-breaker: North stories prefer northern lanes (0, 1, 2)
+        // South cars prefer southern lanes (5, 4, 3)
+        return isNorth ? a.boothId - b.boothId : b.boothId - a.boothId;
+      });
+
+      return boothScores[0].boothId;
+    },
+    []
+  );
+
+  const assignVehicleToLane = useCallback(
+    (vehicle: VehicleStory, currentBooths: TollBooth[], currentVehicles?: VehicleStory[]) => {
+      return selectShortestTollLane(vehicle, currentBooths, currentVehicles);
+    },
+    [selectShortestTollLane]
+  );
+
+  // Spawn vehicle on highway (assigns to North or South one-way lane and routes to shortest toll lane)
   const spawnVehicle = useCallback((customPoints?: StoryPoint, specificLane?: number) => {
     if (stateRef.current.sprintSummary) return;
     const scenarioDef = stateRef.current.activeScenarioDef;
@@ -506,12 +553,16 @@ export function useGameEngine() {
     }
 
     const newVehicle = createVehicle(points);
-    const assignedLane = specificLane !== undefined ? specificLane : assignVehicleToLane(newVehicle, stateRef.current.booths);
-    newVehicle.laneIndex = assignedLane;
-    newVehicle.y = 237.5 - newVehicle.width / 2;
+    // Alternate or pick North / South one-way lane
+    const isNorth = Math.random() < 0.5;
+    newVehicle.feederLane = isNorth ? 'north' : 'south';
+    newVehicle.y = (isNorth ? 219.75 : 255.25) - newVehicle.width / 2;
 
-    // Safety: ensure new vehicle starts safely behind any vehicle currently queued or moving on the feeder road
-    const feederCars = stateRef.current.vehicles.filter((v) => v.x < -30 && v.state !== 'departed' && v.state !== 'on_ferry');
+    const assignedLane = specificLane !== undefined ? specificLane : assignVehicleToLane(newVehicle, stateRef.current.booths, stateRef.current.vehicles);
+    newVehicle.laneIndex = assignedLane;
+
+    // Safety: ensure new vehicle starts safely behind any vehicle currently queued or moving on the same one-way feeder lane
+    const feederCars = stateRef.current.vehicles.filter((v) => v.x < -30 && v.feederLane === newVehicle.feederLane && v.state !== 'departed' && v.state !== 'on_ferry');
     if (feederCars.length > 0) {
       const minX = Math.min(...feederCars.map((v) => v.x));
       newVehicle.x = Math.max(-240, Math.min(-140, minX - newVehicle.length - 20));
@@ -774,6 +825,7 @@ export function useGameEngine() {
       v.parkingSlotIndex = nextSlot;
       // Alternate across North (top) and South (bottom) bays
       const isNorth = nextSlot % 2 === 0;
+      v.feederLane = isNorth ? 'north' : 'south';
       const bayIndex = Math.floor(nextSlot / 2);
       const col = bayIndex % 3;
       const row = Math.floor(bayIndex / 3);
@@ -808,6 +860,7 @@ export function useGameEngine() {
       v.state = 'staged';
       v.parkingSlotIndex = slotIndex++;
       const isNorth = v.parkingSlotIndex % 2 === 0;
+      v.feederLane = isNorth ? 'north' : 'south';
       const bayIndex = Math.floor(v.parkingSlotIndex / 2);
       const col = bayIndex % 3;
       const row = Math.floor(bayIndex / 3);
@@ -845,7 +898,9 @@ export function useGameEngine() {
 
       stagedVehicles.sort((a, b) => (a.parkingSlotIndex ?? 0) - (b.parkingSlotIndex ?? 0));
       const target = stagedVehicles[0];
-      const lane = assignVehicleToLane(target, stateRef.current.booths);
+      const isNorth = (target.parkingSlotIndex ?? 0) % 2 === 0;
+      target.feederLane = isNorth ? 'north' : 'south';
+      const lane = assignVehicleToLane(target, stateRef.current.booths, prev);
 
       sound.playClick();
       return prev.map((v) => {
@@ -853,9 +908,10 @@ export function useGameEngine() {
           return {
             ...v,
             state: 'approaching',
+            feederLane: isNorth ? 'north' : 'south',
             laneIndex: lane,
             x: -150,
-            y: 237.5 - v.width / 2
+            y: (isNorth ? 219.75 : 255.25) - v.width / 2
           };
         }
         return v;
@@ -1405,16 +1461,42 @@ export function useGameEngine() {
       const timeSinceLastParkingRelease = now - lastParkingReleaseTimeRef.current;
       // Fast, smooth rollout so stories from sprint planning immediately flow over to the tolls!
       const releaseInterval = isContinualFlow ? 550 : 850;
+      stagedVehicles.sort((a, b) => (a.parkingSlotIndex ?? 0) - (b.parkingSlotIndex ?? 0));
+
+      // Find the next staged story from North or South bay whose slipway into its one-way lane is unblocked
+      const nextVehicle = stagedVehicles.find((cand) => {
+        const candIsNorth = (cand.parkingSlotIndex ?? 0) % 2 === 0;
+        const candLane = candIsNorth ? 'north' : 'south';
+        const candLaneY = candIsNorth ? 219.75 : 255.25;
+        const isSlipwayBlocked = currVehicles.some(
+          (v) =>
+            (v.feederLane === candLane || Math.abs((v.y ?? 0) - candLaneY) < 18) &&
+            v.x > -165 &&
+            v.x < -90 &&
+            v.state !== 'staged' &&
+            v.state !== 'departed' &&
+            v.state !== 'on_ferry'
+        );
+        return !isSlipwayBlocked;
+      }) || stagedVehicles[0];
+
+      const isNorth = (nextVehicle.parkingSlotIndex ?? 0) % 2 === 0;
+      const targetFeederLane = isNorth ? 'north' : 'south';
+
       const entryBlocked = currVehicles.some(
-        (v) => v.x > -165 && v.x < -100 && v.state !== 'staged' && v.state !== 'departed' && v.state !== 'on_ferry'
+        (v) =>
+          (v.feederLane === targetFeederLane || Math.abs((v.y ?? 0) - (isNorth ? 219.75 : 255.25)) < 18) &&
+          v.x > -165 &&
+          v.x < -90 &&
+          v.state !== 'staged' &&
+          v.state !== 'departed' &&
+          v.state !== 'on_ferry'
       );
 
       if (timeSinceLastParkingRelease > releaseInterval && !entryBlocked) {
         lastParkingReleaseTimeRef.current = now;
-        stagedVehicles.sort((a, b) => (a.parkingSlotIndex ?? 0) - (b.parkingSlotIndex ?? 0));
-        const nextVehicle = stagedVehicles[0];
-
-        const assignedLane = assignVehicleToLane(nextVehicle, currBooths);
+        nextVehicle.feederLane = targetFeederLane;
+        const assignedLane = assignVehicleToLane(nextVehicle, currBooths, currVehicles);
         sound.playClick();
         setVehicles((prev) =>
           prev.map((v) => {
@@ -1422,9 +1504,10 @@ export function useGameEngine() {
               return {
                 ...v,
                 state: 'approaching',
+                feederLane: targetFeederLane,
                 laneIndex: assignedLane,
                 x: -150,
-                y: 237.5 - v.width / 2
+                y: (isNorth ? 219.75 : 255.25) - v.width / 2
               };
             }
             return v;
@@ -1624,9 +1707,22 @@ export function useGameEngine() {
     const updatedVehicles = currVehicles.map((vehicle) => {
       const v = { ...vehicle };
 
+      // Ensure feederLane is set for tracking North vs South origin
+      if (!v.feederLane && v.state !== 'staged') {
+        const isNorth = (v.parkingSlotIndex !== undefined ? v.parkingSlotIndex % 2 === 0 : (v.y ?? 237.5) < 237.5);
+        v.feederLane = isNorth ? 'north' : 'south';
+      }
+
+      // Dynamic shortest lane choice: right when entering the ferry / toll plaza approach area,
+      // vehicles choose the shortest available toll lane in real time!
+      if (!v.hasChosenPlazaLane && v.state === 'approaching' && v.x >= -85 && v.x <= 40) {
+        v.hasChosenPlazaLane = true;
+        v.laneIndex = selectShortestTollLane(v, currBooths, currVehicles);
+      }
+
       // Lane assignment for approaching vehicles (do not assign to staged parking lot cars until dispatched)
       if (v.laneIndex === -1 && currSettings.autoAssignLanes && v.state !== 'staged') {
-        v.laneIndex = assignVehicleToLane(v, currBooths);
+        v.laneIndex = selectShortestTollLane(v, currBooths, currVehicles);
       }
 
       if (v.laneIndex >= 0 && (v.state === 'approaching' || v.state === 'queued' || v.state === 'processing')) {
@@ -1809,7 +1905,8 @@ export function useGameEngine() {
       // Target Y when settled in assigned booth lane
       const assignedLane = v.laneIndex >= 0 && v.laneIndex < LANE_Y_POSITIONS.length ? v.laneIndex : 2;
       const targetLaneY = LANE_Y_POSITIONS[assignedLane] + (70 - v.width) / 2;
-      const FEEDER_Y = 237.5 - v.width / 2;
+      const isNorth = v.feederLane === 'north' || (v.parkingSlotIndex !== undefined && v.parkingSlotIndex % 2 === 0);
+      const FEEDER_Y = (isNorth ? 219.75 : 255.25) - v.width / 2;
 
       // Processing state: firmly anchored at barrier stop line
       if (v.state === 'processing') {
@@ -1841,7 +1938,7 @@ export function useGameEngine() {
           stopX = Math.min(stopX, laneStopX);
         }
 
-        // 2. Feeder and fan-out merge spacing: single file until paths diverge in Y
+        // 2. Feeder spacing: single file within the same one-way lane (North or South)
         if (v.x < -10) {
           const feederAhead = updatedVehicles.filter(
             (other) =>
@@ -1851,7 +1948,7 @@ export function useGameEngine() {
               other.x < 25 &&
               other.state !== 'departed' &&
               other.state !== 'on_ferry' &&
-              Math.abs((other.y ?? FEEDER_Y) - (v.y ?? FEEDER_Y)) < 34
+              (other.feederLane ? other.feederLane === (isNorth ? 'north' : 'south') : Math.abs((other.y ?? FEEDER_Y) - (v.y ?? FEEDER_Y)) < 22)
           );
 
           if (feederAhead.length > 0) {
