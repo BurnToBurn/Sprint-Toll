@@ -9,7 +9,6 @@ import {
 import {
   AlertTriangle,
   Scissors,
-  Zap,
   Lock,
   Plus,
   ArrowRight,
@@ -33,12 +32,15 @@ interface TollSimulationCanvasProps {
   onSelectVehicle: (v: VehicleStory) => void;
   onSelectBooth: (boothId: number) => void;
   onSliceStory: (vehicleId: string) => void;
+  onSliceAllStoriesInLane?: (laneIndex: number) => void;
   onUnlockBooth: (boothId: number) => void;
   onSpawnStory?: (points?: StoryPoint) => void;
   onLaunchFerry: () => void;
   onUpgradeEfficiency?: (boothId: number) => void;
   onUpgradeAutomation?: (boothId: number) => void;
   onSetLaneWipLimit?: (boothId: number, limit: number) => void;
+  gameSpeed?: number;
+  onSetGameSpeed?: (speed: number) => void;
   continuousFlowMode?: boolean;
   onToggleContinuousFlow?: () => void;
   funds: number;
@@ -60,12 +62,15 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
   onSelectVehicle,
   onSelectBooth,
   onSliceStory,
+  onSliceAllStoriesInLane,
   onUnlockBooth,
   onSpawnStory,
   onLaunchFerry,
   onUpgradeEfficiency,
   onUpgradeAutomation,
   onSetLaneWipLimit,
+  gameSpeed = 1,
+  onSetGameSpeed,
   continuousFlowMode = true,
   onToggleContinuousFlow,
   funds,
@@ -77,6 +82,29 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
 }) => {
   const [hoveredVehicle, setHoveredVehicle] = useState<VehicleStory | null>(null);
   const [selectedViolationBooth, setSelectedViolationBooth] = useState<TollBooth | null>(null);
+  const previousGameSpeedRef = React.useRef<number | null>(null);
+
+  const openFlowInspection = (booth: TollBooth) => {
+    if (previousGameSpeedRef.current === null && onSetGameSpeed) {
+      previousGameSpeedRef.current = gameSpeed;
+      onSetGameSpeed(0);
+    }
+    setSelectedViolationBooth(booth);
+  };
+
+  const closeFlowInspection = () => {
+    setSelectedViolationBooth(null);
+    if (previousGameSpeedRef.current !== null && onSetGameSpeed) {
+      onSetGameSpeed(previousGameSpeedRef.current);
+      previousGameSpeedRef.current = null;
+    }
+  };
+
+  React.useEffect(() => () => {
+    if (previousGameSpeedRef.current !== null && onSetGameSpeed) {
+      onSetGameSpeed(previousGameSpeedRef.current);
+    }
+  }, [onSetGameSpeed]);
 
   // Calculate ferry position when sailing
   let ferryX = 470;
@@ -292,7 +320,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             </div>
           </div>
           <button
-            onClick={() => setSelectedViolationBooth(primaryBottleneck.booth)}
+            onClick={() => openFlowInspection(primaryBottleneck.booth)}
             className="px-3 py-1 rounded-xl bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A] font-black text-xs transition-all cursor-pointer flex items-center gap-1.5 shrink-0 ml-3 border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none"
             title="Click to view Flow Efficiency violation explanation and remedies"
           >
@@ -976,7 +1004,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                         {/* Interactive Clickable Road Hazard Badge */}
                         <g
                           className="cursor-pointer group"
-                          onClick={() => setSelectedViolationBooth(booth)}
+                          onClick={() => openFlowInspection(booth)}
                         >
                           <rect
                             x="105"
@@ -1046,7 +1074,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
                       className={`cursor-pointer group ${isSevereBottleneck ? 'animate-pulse' : ''}`}
                       onClick={() => {
                         if (isSevereBottleneck) {
-                          setSelectedViolationBooth(booth);
+                          openFlowInspection(booth);
                         } else {
                           onSelectBooth(booth.id);
                         }
@@ -1622,21 +1650,6 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
               <span>⚡ Release Next</span>
             </button>
           )}
-
-          {onToggleContinuousFlow && (
-            <button
-              onClick={onToggleContinuousFlow}
-              className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 font-mono font-black cursor-pointer border-2 border-[#1E222A] shadow-[0_2px_0_#1E222A] active:translate-y-0.5 active:shadow-none ${
-                continuousFlowMode
-                  ? 'bg-[#FFD200] text-[#1E222A]'
-                  : 'bg-[#2B2F38] text-slate-300 hover:text-white'
-              }`}
-              title="Toggle Continual Flow Mode: Continuous stream of user stories entering the highway"
-            >
-              <Zap className={`w-3.5 h-3.5 ${continuousFlowMode ? 'text-[#E85D04] fill-[#E85D04]' : 'text-slate-400'}`} />
-              <span>{continuousFlowMode ? 'FLOW: CONTINUAL' : 'FLOW: BATCH'}</span>
-            </button>
-          )}
         </div>
 
         {/* Quick Instructions & Ferry Trigger */}
@@ -1665,7 +1678,7 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
       {/* Flow Efficiency Principle Violation Educational Modal */}
       {selectedViolationBooth && (
         <FlowEfficiencyViolationModal
-          booth={selectedViolationBooth}
+          booth={booths.find((b) => b.id === selectedViolationBooth.id) || selectedViolationBooth}
           laneVehicles={vehicles}
           metrics={metrics || {
             currentWIP: vehicles.length,
@@ -1681,8 +1694,9 @@ export const TollSimulationCanvas: React.FC<TollSimulationCanvasProps> = ({
             completedPointsTotal: 0
           }}
           funds={funds}
-          onClose={() => setSelectedViolationBooth(null)}
+          onClose={closeFlowInspection}
           onSliceStory={onSliceStory}
+          onSliceAllStoriesInLane={onSliceAllStoriesInLane}
           onUpgradeEfficiency={onUpgradeEfficiency}
           onUpgradeAutomation={onUpgradeAutomation}
           onSetWipLimit={onSetLaneWipLimit}

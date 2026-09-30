@@ -81,6 +81,7 @@ export default function App() {
     toggleContinuousFlowMode,
     spawnVehicle,
     sliceStory,
+    sliceStoriesInLane,
     launchFerry,
     unlockBooth,
     upgradeBoothEfficiency,
@@ -190,11 +191,14 @@ export default function App() {
                 setIsUpgradesOpen(true);
               }}
               onSliceStory={sliceStory}
+              onSliceAllStoriesInLane={sliceStoriesInLane}
               onUnlockBooth={unlockBooth}
               onLaunchFerry={launchFerry}
               onUpgradeEfficiency={upgradeBoothEfficiency}
               onUpgradeAutomation={upgradeBoothAutomation}
               onSetLaneWipLimit={setLaneWipLimit}
+              gameSpeed={settings.gameSpeed}
+              onSetGameSpeed={setGameSpeed}
               continuousFlowMode={settings.continuousFlowMode}
               onToggleContinuousFlow={toggleContinuousFlowMode}
               funds={funds}
@@ -262,6 +266,7 @@ export default function App() {
         onClearAll={clearAllBacklog}
         onAddStory={addBacklogStory}
         onRemoveItem={removeBacklogItem}
+        scenarioTitle={activeScenarioDef?.title}
       />
 
       <StoryInspectorModal
@@ -289,7 +294,10 @@ export default function App() {
         isOpen={isScenarioSelectOpen}
         onClose={closeScenarioSelect}
         activeScenarioId={activeScenario?.scenarioId || null}
-        onSelectScenario={startScenario}
+        onSelectScenario={(scenario) => {
+          setActiveTab('simulation');
+          startScenario(scenario);
+        }}
         onResetToFreePlay={resetToFreePlay}
       />
 
@@ -298,7 +306,10 @@ export default function App() {
         <ScenarioOutcomeModal
           scenarioState={activeScenario}
           scenarioDef={activeScenarioDef}
-          onRestartScenario={restartScenario}
+          onRestartScenario={() => {
+            setActiveTab('simulation');
+            restartScenario();
+          }}
           onChooseAnotherScenario={openScenarioSelect}
           onReturnToFreePlay={resetToFreePlay}
           onReturnToMainMenu={openMainMenu}
@@ -323,10 +334,17 @@ export default function App() {
         soundEnabled={settings.soundEnabled}
         continuousFlowMode={settings.continuousFlowMode}
         gameSpeed={settings.gameSpeed}
-        onResumeGame={resumeGame}
-        onStartNewGame={startNewFreePlayGame}
+        onResumeGame={() => {
+          setActiveTab('simulation');
+          resumeGame();
+        }}
+        onStartNewGame={() => {
+          setActiveTab('simulation');
+          startNewFreePlayGame();
+        }}
         onOpenScenarios={openScenarioSelect}
         onSelectScenario={(scenario) => {
+          setActiveTab('simulation');
           startScenario(scenario);
         }}
         onOpenAcademy={() => {

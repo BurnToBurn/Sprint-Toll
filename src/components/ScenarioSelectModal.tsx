@@ -189,7 +189,7 @@ export const ScenarioSelectModal: React.FC<ScenarioSelectModalProps> = ({
                       style={{ fontFamily: 'var(--font-heading)' }}
                     >
                       <Play className="w-3.5 h-3.5 fill-current" />
-                      Play Scenario
+                      <span>Start Challenge</span>
                     </button>
                   )}
                 </div>

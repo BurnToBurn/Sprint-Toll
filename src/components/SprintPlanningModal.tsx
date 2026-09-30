@@ -35,6 +35,7 @@ interface SprintPlanningModalProps {
   onClearAll: () => void;
   onAddStory?: (points: StoryPoint) => void;
   onRemoveItem?: (id: string) => void;
+  scenarioTitle?: string;
 }
 
 const STORY_POINTS: StoryPoint[] = [1, 2, 3, 5, 8, 13, 21];
@@ -63,7 +64,8 @@ export const SprintPlanningModal: React.FC<SprintPlanningModalProps> = ({
   onSelectAll,
   onClearAll,
   onAddStory,
-  onRemoveItem
+  onRemoveItem,
+  scenarioTitle
 }) => {
   const committedItems = useMemo(() => backlogItems.filter((i) => i.selected), [backlogItems]);
   const committedPoints = useMemo(
@@ -93,14 +95,19 @@ export const SprintPlanningModal: React.FC<SprintPlanningModalProps> = ({
               <Calendar className="w-4 h-4" />
             </div>
             <div>
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 <span className="font-mono font-black text-[9px] uppercase tracking-wider px-2 py-0.5 rounded-md bg-[#384050] text-[#FFD200]">
                   Parking Lot Staging
                 </span>
                 <span className="text-[10px] text-slate-400">Day #{dayNumber}</span>
+                {scenarioTitle && (
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#004831] text-[#66BD29] border border-[#66BD29]/40 font-bold">
+                    Challenge: {scenarioTitle}
+                  </span>
+                )}
               </div>
               <h2 className="text-base sm:text-lg font-black text-white tracking-tight flex items-center gap-2">
-                Parking Lot Staging
+                Parking Lot Staging &amp; Sprint Planning
               </h2>
             </div>
           </div>
@@ -436,7 +443,9 @@ export const SprintPlanningModal: React.FC<SprintPlanningModalProps> = ({
                   : 'bg-[#FFD200] hover:bg-[#FFE043] text-[#1E222A]'
               }`}
             >
-              <span>🚀 Stage Parking Lot & Open Roadway</span>
+              <span>
+                {scenarioTitle ? '🚀 Stage Parking Lot & Start Challenge' : '🚀 Stage Parking Lot & Start Shift'}
+              </span>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
